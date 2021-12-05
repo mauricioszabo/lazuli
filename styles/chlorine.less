@@ -158,11 +158,11 @@ div.result-overlay.result, div.repl-tooling.result {
     }
   }
 
-  div {
-    display: flex;
-    flex-direction: row;
-  }
-
+  // div {
+  //   display: flex;
+  //   flex-direction: row;
+  // }
+  //
   div.browseable {
     flex-direction: column;
   }
@@ -222,10 +222,10 @@ div.chlorine.result-overlay {
     border-left: 2px solid #bb0000;
   }
 
-  div {
-    display: flex;
-    flex-direction: row;
-  }
+  // div {
+  //   display: flex;
+  //   flex-direction: row;
+  // }
 }
 
 div.repl-tooling.console {
@@ -292,4 +292,9 @@ div.repl-tooling.console {
       color: @text-color-info;
     }
   }
+}
+
+div.repl-tooling.result div.inline {
+  white-space: pre;
+  display: inline;
 }
