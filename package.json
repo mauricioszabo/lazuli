@@ -9,14 +9,10 @@
     "clojureclr",
     "clojerl",
     "babashka",
-    "lumo",
-    "plank",
-    "joker",
     "repl",
     "interactive",
-    "socket repl",
     "nrepl",
-    "clj-kondo"
+    "shadow-cljs"
   ],
   "repository": "https://gitlab.com/clj-editors/atom-chlorine",
   "license": "MIT",
