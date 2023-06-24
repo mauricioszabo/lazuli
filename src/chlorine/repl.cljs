@@ -145,6 +145,20 @@
                                ; code to REPL-Tooling little by little
                                :tooling-state st))))))
 
+(defn connect-nrepl! [host port]
+  (p/let [st (connection/connect-nrepl! host port callbacks)]
+    (when st
+      (c-console/open-console (-> @state :config :console-pos)
+                              #(connection/disconnect!))
+      (swap! state #(-> %
+                        (assoc-in [:repls :clj-eval] (:clj/repl @st))
+                        (assoc-in [:repls :clj-aux] (:clj/aux @st))
+                        (assoc :parse (-> @st :editor/features :result-for-renderer))
+                        (assoc :connection {:host host :port port}
+                               ; FIXME: This is just here so we can migrate
+                               ; code to REPL-Tooling little by little
+                               :tooling-state st))))))
+
 (defn connect-static! []
   (when-not (some-> @state :tooling-state deref :repl/info)
     (let [st (connection/connect-callbacks! callbacks)]
