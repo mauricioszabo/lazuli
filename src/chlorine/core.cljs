@@ -24,6 +24,7 @@
 (def commands
   (fn []
     (clj->js {:connect-socket-repl conn/connect-socket!
+              :connect-nrepl conn/connect-nrepl!
               :clear-inline-results repl/clear-inline!
               :clear-console console/clear
 
