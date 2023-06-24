@@ -1,4 +1,6 @@
-{:source-paths ["src" "repl-tooling/src" "repl-tooling/test"
+{:source-paths ["src"
+                "repl-tooling/src" "repl-tooling/test"
+                "repl-tooling/orbit/src" "repl-tooling/orbit/test"
                 "repl-tooling/resources"]
 
  :dependencies [[check "0.2.0-SNAPSHOT"]
@@ -15,7 +17,6 @@
                 [org.pinkgorilla/gorilla-renderable-ui "0.1.33"]
                 [link.szabo.mauricio/duck-repled "0.1.2-SNAPSHOT"]]
 
- :jvm-opts ["-Xmx800M"]
  :builds
  {:dev {:target :node-library
         :js-options {:js-provider :shadow
