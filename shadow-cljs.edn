@@ -43,4 +43,6 @@
         :output-dir "lib/js"
         :output-to "lib/cmds.js"
         :devtools {:before-load-async chlorine.core/before
-                   :after-load chlorine.core/after}}}}
+                   :after-load chlorine.core/after
+                   :preloads [orbit.serializer-test
+                              flow-storm.api]}}}}
