@@ -146,7 +146,7 @@
                                :tooling-state st))))))
 
 (defn connect-nrepl! [host port]
-  (p/let [st (connection/connect-nrepl! host port callbacks)]
+  (p/let [st (connection/connect! host port callbacks)]
     (when st
       (c-console/open-console (-> @state :config :console-pos)
                               #(connection/disconnect!))

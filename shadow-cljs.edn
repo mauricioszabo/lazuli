@@ -1,6 +1,7 @@
 {:source-paths ["src"
                 "repl-tooling/src" "repl-tooling/test"
                 "repl-tooling/orbit/src" "repl-tooling/orbit/test"
+                "tango/src"
                 "repl-tooling/resources"]
 
  :dependencies [[check "0.2.0-SNAPSHOT"]
@@ -15,7 +16,8 @@
                 [cider/orchard "0.5.8"]
                 [com.wsscode/pathom "2.3.1"]
                 [org.pinkgorilla/gorilla-renderable-ui "0.1.33"]
-                [link.szabo.mauricio/duck-repled "0.1.2-SNAPSHOT"]]
+                [link.szabo.mauricio/orbit "2023-08-16.03.26"]
+                [link.szabo.mauricio/duck-repled "2023-08-29.01.47"]]
 
  :builds
  {:dev {:target :node-library
@@ -28,6 +30,7 @@
         :compiler-options {:warnings {:fn-deprecated false}}
         :exports {:config chlorine.core/config
                   :commands chlorine.core/commands
+                  :commands2 chlorine2.core/commands
                   :aux chlorine.core/aux
                   :repl chlorine.repl/exports
 

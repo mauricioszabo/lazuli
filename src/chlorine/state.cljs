@@ -21,7 +21,12 @@
                :type :boolean
                :default false}})
 
-(defn- seed-configs []
+(defn seed-configs []
+  (->> configs
+       (map (fn [[k v]] [k (:default v)]))
+       (into {})))
+
+(defn get-config []
   (->> configs
        (map (fn [[k v]] [k (:default v)]))
        (into {})))
@@ -32,3 +37,22 @@
                    :clj-aux nil}
            :refresh {:needs-clear? true}
            :config (seed-configs)}))
+
+#_
+(let [eql (-> @state :tooling-state deref
+              :editor/features
+              :eql)]
+ gensym
+ (promesa.core/let [info (eql [:text/current-var
+                                                             :definition/row :definition/col
+                                                              :definition/filename
+                                                              {:definition/contents [{:text/top-block [:text/contents]}]}])]
+        (if-let [contents (:definition/contents info)]
+          (->> contents
+               (def res1))
+          (promesa.core/let [pos [(:definition/row info) (:definition/col info)]
+                             info (eql {:file/filename (:definition/filename info)}
+                                       [{(list :file/contents {:range [pos pos]})
+                                         [{:text/top-block [:text/contents]}]}])]
+            (->> info
+                 (def res2))))))

@@ -46,6 +46,27 @@
         (aset "classList" "chlorine result-overlay native-key-bindings")
         (aset "innerHTML" "<div><span class='repl-tooling icon loading'></span></div>")))))
 
+(defn create! [data]
+  (when-let [editor (-> data :editor/data :editor)]
+    (let [id (:id data)
+          range (:text/range data)
+          _ (when-let [old-marker (find-result editor range)]
+              (.destroy old-marker))
+          div (create-result id editor range)]
+      (doto div
+            (aset "classList" "chlorine result native-key-bindings")
+            (aset "innerHTML" "<div><span class='repl-tooling icon loading'></span></div>")))))
+
+
+(defn update! [connection-state data]
+  (def connection-state connection-state)
+  (def data data)
+  (let [id (:id data)]
+    (when-let [{:keys [div]} (get @results id)]
+      (let [parse (-> @connection-state :editor/features :result-for-renderer)
+            hiccup (parse data connection-state)]
+        (rdom/render hiccup div)))))
+
 (s/defn update-result [result :- schemas/EvalResult]
   (let [id (:id result)
         {:keys [editor range]} (:editor-data result)]

@@ -1,3 +1,6 @@
 [submodule "repl-tooling"]
 	path = repl-tooling
 	url = git@gitlab.com:clj-editors/repl-tooling.git
+[submodule "tango"]
+	path = tango
+	url = git@gitlab.com:clj-editors/tango
