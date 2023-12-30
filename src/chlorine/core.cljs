@@ -10,17 +10,6 @@
 
 (def config (configs/get-configs))
 
-(defn- subscribe-editor-events [^js editor]
-  (when (and (-> editor .getGrammar .-scopeName (= "source.clojure"))
-             (.getPath editor)
-             (not (str/ends-with? (.getPath editor) "edn")))
-    (.add ^js @aux/subscriptions (.onDidSave editor #(refresh/run-editor-refresh!)))))
-
-(defn- observe-editors []
-  (.add @aux/subscriptions
-        (.. js/atom -workspace
-            (observeTextEditors subscribe-editor-events))))
-
 (def commands
   (fn []
     (clj->js {:connect-socket-repl conn/connect-socket!
@@ -35,7 +24,6 @@
               :toggle-refresh-mode refresh/toggle-refresh})))
 
 (def aux #js {:reload aux/reload-subscriptions!
-              :observe_editor observe-editors
               :connect_static repl/connect-static!
               :observe_config configs/observe-configs!
               :get_disposable (fn [] @aux/subscriptions)})
