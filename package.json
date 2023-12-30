@@ -7,7 +7,6 @@
     "clojure",
     "clojurescript",
     "clojureclr",
-    "clojerl",
     "babashka",
     "repl",
     "interactive",
