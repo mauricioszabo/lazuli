@@ -8,6 +8,8 @@
             [chlorine.state :as state]
             [chlorine.ui.atom :as atom]
             [chlorine.ui.inline-results :as inline]
+            [chlorine2.ui.console :as console]
+            [tango.ui.console :as tango-console]
             [promesa.core :as p]))
 
 (defonce ^:private connections
@@ -105,6 +107,68 @@
   (doseq [[key {:keys [command]}] commands]
     (add-command! (name key) command)))
 
+(defn- text-with-stacktrace [texts-or-traces]
+  ^:tango/interactive
+  {:html
+    (into [:div.rows]
+          (for [row texts-or-traces]
+            (if (map? row)
+              [:div.children
+               [:div.cols
+                "at "
+                [:a {:href "#" :on-click '(fn [e]
+                                            (.stopPropagation e)
+                                            (.preventDefault e)
+                                            (prn "LOL!"))}
+                 (str (:file row) ":" (:row row) (when-let [col (:col row)]
+                                                   (str ":" col)))]]]
+              row)))})
+
+(defn- shadow-error [error]
+  (let [traces (re-seq #" File: (.*?):(\d+):(\d+)" error)]
+    (->> traces
+         (map (fn [[_ file row col?]]
+                (cond-> {:file file :row row}
+                  col? (assoc :col col?))))
+         (into [[:div.title "Errors found in compilation process"]
+                [:div.space]
+                [:div error]])
+         text-with-stacktrace)))
+
+(defn- diagnostic! [conn-id console-state output]
+  (let [connection (get @connections conn-id)
+        parse (-> @connection :editor/features :result-for-renderer)]
+    (def parse parse)
+    (cond
+      (:orbit.shadow/errors output)
+      (swap! console-state update :outputs conj ^:icon-bug [:div.content (parse {:result (shadow-error (:orbit.shadow/errors output))})])))
+      ; (swap! console-state update :outputs conj
+      ;        ^:icon-bug (parse {:result (shadow-error (:orbit.shadow/errors output))}))))
+
+ ; (nil 10)
+ (tap> [:diag output]))
+
+
+; (shadow-error "FOO")
+; (:outputs @console-state)
+; ; (nil 10)
+
+(defn- start-eval! [console-state result]
+  (inline/create! result)
+  (let [r (r/atom [:div [:span {:class "repl-tooling icon loading"}]])]
+    (swap! console-state
+           #(-> %
+                (assoc-in [:evals (:id result)] r)
+                (update :outputs conj ^:icon-code [:div.content [(fn [] @r)]])))))
+
+(defn- did-eval! [console-state conn-id result]
+  (let [connection (get @connections conn-id)
+        parse (-> @connection :editor/features :result-for-renderer)]
+    (inline/update! connection result)
+    (when-let [res (get-in @console-state [:evals (:id result)])]
+      (reset! res (parse result))
+      (swap! console-state update :evals dissoc (:id result)))))
+
 (defn connect-nrepl!
   ([]
    (conn-view (fn [panel]
@@ -113,16 +177,35 @@
                 (destroy! panel))))
   ([host port]
    (p/let [id (-> @connections keys last inc)
-           console-state (r/atom [])
+           console-state (r/atom {:outputs [] :evals {}})
+           _ (def console-state console-state)
+           out-state (r/cursor console-state [:outputs])
            callbacks {:on-disconnect #(disconnect! id)
-                      :on-stdout #(swap! console-state conj [:stdout %])
-                      :on-start-eval inline/create!
-                      :on-eval #(inline/update! (get @connections id) %)
+                      :on-stdout #(tango-console/append-text out-state :stdout %)
+                      :on-stderr #(tango-console/append-text out-state :stderr %)
+                      :on-diagnostic #(diagnostic! id console-state %)
+                      :on-start-eval #(start-eval! console-state %)
+                      :on-eval #(did-eval! console-state id %)
                       :notify notify!
                       :register-commands register-commands!
                       :prompt (partial prn :PROMPT)
                       :get-config #(state/get-config)
-                      :on-stderr #(swap! console-state conj [:stderr %])
                       :editor-data #(get-editor-data)}
-           repl (conn/connect! host port callbacks)]
-     (swap! connections assoc id repl))))
+           repl-state (conn/connect! host port callbacks)]
+     (console/open-console out-state
+                           (.. js/atom -config (get "chlorine.console-pos"))
+                           #((-> @repl-state :editor/commands :disconnect :command)))
+     (swap! connections assoc id repl-state))))
+
+; ^:tango/interactive {:html [:div.title "Hello"]}
+; (ex-info "LOL" {})
+; (-> (re-seq #" File: (.*?):(\d+):(\d+)" (:orbit.shadow/errors o)))
+; (println (:orbit.shadow/errors o))
+; (nil 109)
+; (nil 300)
+
+; (/ 10 0)
+
+; (connect-nrepl! "10")
+
+{:foo [1 2 3]}

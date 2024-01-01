@@ -57,10 +57,7 @@
             (aset "classList" "chlorine result native-key-bindings")
             (aset "innerHTML" "<div><span class='repl-tooling icon loading'></span></div>")))))
 
-
 (defn update! [connection-state data]
-  (def connection-state connection-state)
-  (def data data)
   (let [id (:id data)]
     (when-let [{:keys [div]} (get @results id)]
       (let [parse (-> @connection-state :editor/features :result-for-renderer)
