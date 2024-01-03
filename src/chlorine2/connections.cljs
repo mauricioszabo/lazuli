@@ -102,8 +102,9 @@
                                               (fn [] (command-function))))]
     (swap! commands conj disposable)))
 
-(defn- register-commands! [commands]
+(defn- register-commands! [console-state commands]
   (remove-all-commands!)
+  (add-command! "clear-console" #(reset! console-state {:outputs [] :evals {}}))
   (doseq [[key {:keys [command]}] commands]
     (add-command! (name key) command)))
 
@@ -119,39 +120,58 @@
                 [:a {:href "#" :on-click '(fn [e]
                                             (.stopPropagation e)
                                             (.preventDefault e)
+                                            ; (editor/eql)
                                             (prn "LOL!"))}
-                 (str (:file row) ":" (:row row) (when-let [col (:col row)]
-                                                   (str ":" col)))]]]
+                 (str (:resource-name row (:file row))
+                      ":" (:line row)
+                      (when-let [col (:column row)]
+                        (str ":" col)))]]]
               row)))})
 
 (defn- shadow-error [error]
   (let [traces (re-seq #" File: (.*?):(\d+):(\d+)" error)]
     (->> traces
          (map (fn [[_ file row col?]]
-                (cond-> {:file file :row row}
-                  col? (assoc :col col?))))
+                (cond-> {:file file :line row}
+                  col? (assoc :column col?))))
          (into [[:div.title "Errors found in compilation process"]
                 [:div.space]
                 [:div error]])
          text-with-stacktrace)))
 
+(defn- shadow-warnings [warnings]
+  (let [all-warnings (for [warning warnings]
+                       [[:div.error (:msg warning)]
+                        [:code
+                         (->> warning :source-excerpt :before
+                              (map #(vector :div.block (if (seq %) % " ")))
+                              (into [:<>]))
+                         [:div (-> warning :source-excerpt :line)]
+                         [:div (str (->> " "
+                                         (repeat (-> warning :column dec))
+                                         (apply str))
+                                    "^")]]
+                        warning
+                        [:div.space]])]
+    (->> all-warnings
+         (mapcat identity)
+         (into [
+                [:div.title "Warnings"]
+                [:div.space]])
+         text-with-stacktrace)))
+
 (defn- diagnostic! [conn-id console-state output]
   (let [connection (get @connections conn-id)
         parse (-> @connection :editor/features :result-for-renderer)]
-    (def parse parse)
     (cond
       (:orbit.shadow/errors output)
-      (swap! console-state update :outputs conj ^:icon-bug [:div.content (parse {:result (shadow-error (:orbit.shadow/errors output))})])))
-      ; (swap! console-state update :outputs conj
-      ;        ^:icon-bug (parse {:result (shadow-error (:orbit.shadow/errors output))}))))
+      (swap! console-state update :outputs conj ^:icon-bug [:div.content (parse {:result (shadow-error (:orbit.shadow/errors output))})])
 
- ; (nil 10)
- (tap> [:diag output]))
+      (:orbit.shadow/warnings output)
+      (swap! console-state update :outputs conj ^:icon-bug [:div.content (parse {:result (shadow-warnings (:orbit.shadow/warnings output))})]))))
 
-
-; (shadow-error "FOO")
-; (:outputs @console-state)
-; ; (nil 10)
+#_
+(diagnostic! 10)
 
 (defn- start-eval! [console-state result]
   (inline/create! result)
@@ -169,6 +189,24 @@
       (reset! res (parse result))
       (swap! console-state update :evals dissoc (:id result)))))
 
+(defn- open-ro-editor [file-name line col position contents]
+  (.. js/atom
+      -workspace
+      (open file-name position)
+      (then #(doto ^js %
+                   (aset "isModified" (constantly false))
+                   (aset "save" (fn [ & _] (atom/warn "Can't save readonly editor" "")))
+                   (.setText contents)
+                   (.setReadOnly true)
+                   (.setCursorBufferPosition #js [line (or col 0)])))))
+
+(defn- open-editor [{:keys [file-name line contents column]}]
+  (let [position (clj->js (cond-> {:initialLine line :searchAllPanes true}
+                                  column (assoc :initialColumn column)))]
+    (if contents
+      (open-ro-editor file-name line column position contents)
+      (.. js/atom -workspace (open file-name position)))))
+
 (defn connect-nrepl!
   ([]
    (conn-view (fn [panel]
@@ -178,7 +216,6 @@
   ([host port]
    (p/let [id (-> @connections keys last inc)
            console-state (r/atom {:outputs [] :evals {}})
-           _ (def console-state console-state)
            out-state (r/cursor console-state [:outputs])
            callbacks {:on-disconnect #(disconnect! id)
                       :on-stdout #(tango-console/append-text out-state :stdout %)
@@ -187,7 +224,8 @@
                       :on-start-eval #(start-eval! console-state %)
                       :on-eval #(did-eval! console-state id %)
                       :notify notify!
-                      :register-commands register-commands!
+                      :open-editor open-editor
+                      :register-commands #(register-commands! console-state %)
                       :prompt (partial prn :PROMPT)
                       :get-config #(state/get-config)
                       :editor-data #(get-editor-data)}
@@ -196,16 +234,3 @@
                            (.. js/atom -config (get "chlorine.console-pos"))
                            #((-> @repl-state :editor/commands :disconnect :command)))
      (swap! connections assoc id repl-state))))
-
-; ^:tango/interactive {:html [:div.title "Hello"]}
-; (ex-info "LOL" {})
-; (-> (re-seq #" File: (.*?):(\d+):(\d+)" (:orbit.shadow/errors o)))
-; (println (:orbit.shadow/errors o))
-; (nil 109)
-; (nil 300)
-
-; (/ 10 0)
-
-; (connect-nrepl! "10")
-
-{:foo [1 2 3]}
