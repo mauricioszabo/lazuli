@@ -27,9 +27,9 @@
        (into {})))
 
 (defn get-config []
-  (->> configs
-       (map (fn [[k v]] [k (:default v)]))
-       (into {})))
+  (let [config (.. js/atom -config (get "chlorine"))]
+    {:eval-mode (-> config (aget "eval-mode") keyword)
+     :console-pos (-> config (aget "console-pos") keyword)}))
 
 (defonce state
   (r/atom {:repls {:clj-eval nil
