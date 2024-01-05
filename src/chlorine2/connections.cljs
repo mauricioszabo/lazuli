@@ -239,21 +239,10 @@
                       :get-config #(state/get-config)
                       :editor-data #(get-editor-data)}
            repl-state (conn/connect! host port callbacks)]
-     (p/then (console/open-console (.. js/atom -config (get "chlorine.console-pos"))
-                                   #((-> @repl-state :editor/commands :disconnect :command)))
-             (fn [c]
-               (def c c)
-               (tango-console/clear c)
-               (reset! console c)))
-     (swap! connections assoc id repl-state))))
-
-#_(tango-console/stderr c "Hello\n")
-
-#_
-(js/console.log
- (->> (. c querySelectorAll ".content.pending")
-      (map #(.-parentNode %))
-      into-array))
-
-#_
-(js/console.log (js/document.querySelector ".content .pending"))
+     (when repl-state
+       (p/then (console/open-console (.. js/atom -config (get "chlorine.console-pos"))
+                                     #((-> @repl-state :editor/commands :disconnect :command)))
+               (fn [c]
+                 (tango-console/clear c)
+                 (reset! console c)))
+       (swap! connections assoc id repl-state)))))
