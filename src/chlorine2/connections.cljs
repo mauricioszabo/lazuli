@@ -102,9 +102,9 @@
                                               (fn [] (command-function))))]
     (swap! commands conj disposable)))
 
-(defn- register-commands! [console-state commands]
+(defn- register-commands! [console commands]
   (remove-all-commands!)
-  (add-command! "clear-console" #(reset! console-state {:outputs [] :evals {}}))
+  (add-command! "clear-console" #(tango-console/clear @console))
   (doseq [[key {:keys [command]}] commands]
     (add-command! (name key) command)))
 
@@ -121,7 +121,7 @@
                                             (.stopPropagation e)
                                             (.preventDefault e)
                                             ; (editor/eql)
-                                            (prn "LOL!"))}
+                                            #_(prn "LOL!"))}
                  (str (:resource-name row (:file row))
                       ":" (:line row)
                       (when-let [col (:column row)]
@@ -160,34 +160,44 @@
                 [:div.space]])
          text-with-stacktrace)))
 
-(defn- diagnostic! [conn-id console-state output]
+
+(defn- diagnostic! [conn-id console output]
   (let [connection (get @connections conn-id)
-        parse (-> @connection :editor/features :result-for-renderer)]
+        parse (-> @connection :editor/features :result-for-renderer)
+        append-error (fn [error]
+                       (let [div (doto (js/document.createElement "div")
+                                       (.. -classList (add "content")))
+                             hiccup (parse {:result error})]
+                         (rdom/render hiccup div)
+                         (tango-console/append console div ["icon-bug"])))]
     (cond
-      (:orbit.shadow/errors output)
-      (swap! console-state update :outputs conj ^:icon-bug [:div.content (parse {:result (shadow-error (:orbit.shadow/errors output))})])
+      (-> output meta :orbit.shadow/error)
+      (append-error output))))
 
-      (:orbit.shadow/warnings output)
-      (swap! console-state update :outputs conj ^:icon-bug [:div.content (parse {:result (shadow-warnings (:orbit.shadow/warnings output))})]))))
-
-#_
-(diagnostic! 10)
-
-(defn- start-eval! [console-state result]
+(defn- start-eval! [console result]
   (inline/create! result)
-  (let [r (r/atom [:div [:span {:class "repl-tooling icon loading"}]])]
-    (swap! console-state
-           #(-> %
-                (assoc-in [:evals (:id result)] r)
-                (update :outputs conj ^:icon-code [:div.content [(fn [] @r)]])))))
 
-(defn- did-eval! [console-state conn-id result]
-  (let [connection (get @connections conn-id)
-        parse (-> @connection :editor/features :result-for-renderer)]
+  (let [div (js/document.createElement "div")]
+    (set! (.-id div) (:id result))
+    (.. div -classList (add "content" "pending"))
+    (set! (.-innerHTML div) "<span class='tango icon loading'></span>")
+    (tango-console/append console div ["icon-code"])
+    (js/setTimeout (fn []
+                     (when (.. div -classList (contains "pending"))
+                       (.. div -classList (remove "pending"))
+                       (set! (.-innerHTML div)
+                         "<div class='result error'>Timed out while waiting for a result</div>")))
+                   30000)))
+
+(defn- did-eval! [console conn-id result]
+  (let [connection (get @connections conn-id)]
     (inline/update! connection result)
-    (when-let [res (get-in @console-state [:evals (:id result)])]
-      (reset! res (parse result))
-      (swap! console-state update :evals dissoc (:id result)))))
+
+    (when-let [div (.querySelector console (str "#" (:id result)))]
+      (.. div -classList (remove "pending"))
+      (let [parse (-> @connection :editor/features :result-for-renderer)
+            hiccup (parse result connection)]
+        (rdom/render hiccup div)))))
 
 (defn- open-ro-editor [file-name line col position contents]
   (.. js/atom
@@ -215,22 +225,35 @@
                 (destroy! panel))))
   ([host port]
    (p/let [id (-> @connections keys last inc)
-           console-state (r/atom {:outputs [] :evals {}})
-           out-state (r/cursor console-state [:outputs])
+           console (atom nil)
            callbacks {:on-disconnect #(disconnect! id)
-                      :on-stdout #(tango-console/append-text out-state :stdout %)
-                      :on-stderr #(tango-console/append-text out-state :stderr %)
-                      :on-diagnostic #(diagnostic! id console-state %)
-                      :on-start-eval #(start-eval! console-state %)
-                      :on-eval #(did-eval! console-state id %)
+                      :on-stdout #(tango-console/stdout @console %)
+                      :on-stderr #(tango-console/stderr @console %)
+                      :on-diagnostic #(diagnostic! id @console %)
+                      :on-start-eval #(start-eval! @console %)
+                      :on-eval #(did-eval! @console id %)
                       :notify notify!
                       :open-editor open-editor
-                      :register-commands #(register-commands! console-state %)
+                      :register-commands #(register-commands! console %)
                       :prompt (partial prn :PROMPT)
                       :get-config #(state/get-config)
                       :editor-data #(get-editor-data)}
            repl-state (conn/connect! host port callbacks)]
-     (console/open-console out-state
-                           (.. js/atom -config (get "chlorine.console-pos"))
-                           #((-> @repl-state :editor/commands :disconnect :command)))
+     (p/then (console/open-console (.. js/atom -config (get "chlorine.console-pos"))
+                                   #((-> @repl-state :editor/commands :disconnect :command)))
+             (fn [c]
+               (def c c)
+               (tango-console/clear c)
+               (reset! console c)))
      (swap! connections assoc id repl-state))))
+
+#_(tango-console/stderr c "Hello\n")
+
+#_
+(js/console.log
+ (->> (. c querySelectorAll ".content.pending")
+      (map #(.-parentNode %))
+      into-array))
+
+#_
+(js/console.log (js/document.querySelector ".content .pending"))
