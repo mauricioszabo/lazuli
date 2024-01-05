@@ -155,8 +155,7 @@
                         [:div.space]])]
     (->> all-warnings
          (mapcat identity)
-         (into [
-                [:div.title "Warnings"]
+         (into [[:div.title "Warnings"]
                 [:div.space]])
          text-with-stacktrace)))
 
@@ -170,9 +169,15 @@
                              hiccup (parse {:result error})]
                          (rdom/render hiccup div)
                          (tango-console/append console div ["icon-bug"])))]
+    (def connection connection)
     (cond
       (-> output meta :orbit.shadow/error)
-      (append-error output))))
+      (append-error output)
+
+      (:orbit.shadow/clients-changed output)
+      (tango-console/update-clients console
+                                    connection
+                                    (:orbit.shadow/clients-changed output)))))
 
 (defn- start-eval! [console result]
   (inline/create! result)
