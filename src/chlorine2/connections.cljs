@@ -108,58 +108,6 @@
   (doseq [[key {:keys [command]}] commands]
     (add-command! (name key) command)))
 
-(defn- text-with-stacktrace [texts-or-traces]
-  ^:tango/interactive
-  {:html
-    (into [:div.rows]
-          (for [row texts-or-traces]
-            (if (map? row)
-              [:div.children
-               [:div.cols
-                "at "
-                [:a {:href "#" :on-click '(fn [e]
-                                            (.stopPropagation e)
-                                            (.preventDefault e)
-                                            ; (editor/eql)
-                                            #_(prn "LOL!"))}
-                 (str (:resource-name row (:file row))
-                      ":" (:line row)
-                      (when-let [col (:column row)]
-                        (str ":" col)))]]]
-              row)))})
-
-(defn- shadow-error [error]
-  (let [traces (re-seq #" File: (.*?):(\d+):(\d+)" error)]
-    (->> traces
-         (map (fn [[_ file row col?]]
-                (cond-> {:file file :line row}
-                  col? (assoc :column col?))))
-         (into [[:div.title "Errors found in compilation process"]
-                [:div.space]
-                [:div error]])
-         text-with-stacktrace)))
-
-(defn- shadow-warnings [warnings]
-  (let [all-warnings (for [warning warnings]
-                       [[:div.error (:msg warning)]
-                        [:code
-                         (->> warning :source-excerpt :before
-                              (map #(vector :div.block (if (seq %) % " ")))
-                              (into [:<>]))
-                         [:div (-> warning :source-excerpt :line)]
-                         [:div (str (->> " "
-                                         (repeat (-> warning :column dec))
-                                         (apply str))
-                                    "^")]]
-                        warning
-                        [:div.space]])]
-    (->> all-warnings
-         (mapcat identity)
-         (into [[:div.title "Warnings"]
-                [:div.space]])
-         text-with-stacktrace)))
-
-
 (defn- diagnostic! [conn-id console output]
   (let [connection (get @connections conn-id)
         parse (-> @connection :editor/features :result-for-renderer)
@@ -172,6 +120,9 @@
     (cond
       (-> output meta :orbit.shadow/error)
       (append-error output)
+
+      (:orbit.shadow/compile-info output)
+      (tango-console/update-build-status console (:orbit.shadow/compile-info output))
 
       (:orbit.shadow/clients-changed output)
       (tango-console/update-clients console
