@@ -169,7 +169,6 @@
                              hiccup (parse {:result error})]
                          (rdom/render hiccup div)
                          (tango-console/append console div ["icon-bug"])))]
-    (def connection connection)
     (cond
       (-> output meta :orbit.shadow/error)
       (append-error output)
