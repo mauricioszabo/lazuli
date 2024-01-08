@@ -114,7 +114,7 @@
         append-error (fn [error]
                        (let [div (doto (js/document.createElement "div")
                                        (.. -classList (add "content")))
-                             hiccup (parse {:result error})]
+                             hiccup (parse {:error error})]
                          (rdom/render hiccup div)
                          (tango-console/append console div ["icon-bug"])))]
     (cond
