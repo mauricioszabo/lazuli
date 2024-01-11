@@ -28,15 +28,13 @@
               :observe_config configs/observe-configs!
               :get_disposable (fn [] @aux/subscriptions)})
 
-(defn before [done]
+#_#_
+(defn- ^:dev/before-load before []
   (let [main (.. js/atom -packages (getActivePackage "chlorine") -mainModule)]
-    (.deactivate main)
-    (done)))
+    (.deactivate main)))
 
-(defn after []
+(defn- ^:dev/before-load after []
   (let [main (.. js/atom -packages (getActivePackage "chlorine") -mainModule)]
     (.activate main)
     (.. js/atom -notifications (addSuccess "Reloaded Chlorine"))
     (println "Reloaded")))
-
-(s/set-fn-validation! (.-DEBUG js/goog))

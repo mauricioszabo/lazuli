@@ -16,8 +16,7 @@
                 [cider/orchard "0.5.8"]
                 [com.wsscode/pathom "2.3.1"]
                 [org.pinkgorilla/gorilla-renderable-ui "0.1.33"]
-                [link.szabo.mauricio/orbit "2024-01-03.04.11"]
-                [link.szabo.mauricio/duck-repled "2023-08-29.01.47"]]
+                [link.szabo.mauricio/duck-repled "2024-01-11.02.08"]]
 
  :builds
  {:dev {:target :node-library
@@ -28,7 +27,9 @@
         :dev {:closure-defines {chlorine.aux/TESTS true
                                 com.wsscode.pathom.misc.INCLUDE_SPECS false}}
         :compiler-options {:warnings {:fn-deprecated false}}
-        :exports {:config chlorine.core/config
+        :exports {:deactivate chlorine2.core/deactivate
+
+                  :config chlorine.core/config
                   :commands chlorine.core/commands
                   :commands2 chlorine2.core/commands
                   :aux chlorine.core/aux
@@ -45,8 +46,6 @@
 
         :output-dir "lib/js"
         :output-to "lib/cmds.js"
-        :devtools {:before-load-async chlorine.core/before
-                   :after-load chlorine.core/after
-                   :preloads [;orbit.serializer-test
+        :devtools {:preloads [;orbit.serializer-test
                               ;flow-storm.api
                               ]}}}}
