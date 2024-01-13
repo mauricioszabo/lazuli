@@ -10,10 +10,10 @@
             [chlorine.ui.inline-results :as inline]
             [chlorine2.ui.console :as console]
             [tango.ui.console :as tango-console]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [chlorine.providers-consumers.autocomplete :as chlorine-complete]))
 
-(defonce ^:private connections
-  (atom (sorted-map)))
+(defonce connections (atom (sorted-map)))
 
 (defn destroy! [^js panel]
   (.destroy panel)
@@ -195,6 +195,8 @@
                       :editor-data #(get-editor-data)}
            repl-state (conn/connect! host port callbacks)]
      (when repl-state
+       (reset! chlorine-complete/tango-complete
+               (-> @repl-state :editor/features :autocomplete))
        (p/then (console/open-console (.. js/atom -config (get "chlorine.console-pos"))
                                      #((-> @repl-state :editor/commands :disconnect :command)))
                (fn [c]
