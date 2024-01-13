@@ -42,7 +42,6 @@
           (.. js/atom -workspace
               (addOpener (fn [uri]
                            (when (= uri "atom://chlorine2-terminal")
-                             (prn :WILl-OPEN)
                              (aset div "innerHTML" "")
                              (.appendChild div (console/view))
                              console)))))
