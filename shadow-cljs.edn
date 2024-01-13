@@ -16,7 +16,7 @@
                 [cider/orchard "0.5.8"]
                 [com.wsscode/pathom "2.3.1"]
                 [org.pinkgorilla/gorilla-renderable-ui "0.1.33"]
-                [link.szabo.mauricio/duck-repled "0.1.2"]]
+                [link.szabo.mauricio/duck-repled "2024-01-13.00.38"]]
 
  :builds
  {:dev {:target :node-library
