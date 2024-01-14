@@ -11,7 +11,8 @@
             [chlorine2.ui.console :as console]
             [tango.ui.console :as tango-console]
             [promesa.core :as p]
-            [chlorine.providers-consumers.autocomplete :as chlorine-complete]))
+            [chlorine.providers-consumers.autocomplete :as chlorine-complete]
+            [chlorine.providers-consumers.symbols :as symbols]))
 
 (defonce connections (atom (sorted-map)))
 
@@ -197,6 +198,10 @@
      (when repl-state
        (reset! chlorine-complete/tango-complete
                (-> @repl-state :editor/features :autocomplete))
+       #_
+       (reset! chlorine-complete/tango-complete
+               (-> @repl-state :editor/features :get-definition))
+
        (p/then (console/open-console (.. js/atom -config (get "chlorine.console-pos"))
                                      #((-> @repl-state :editor/commands :disconnect :command)))
                (fn [c]
