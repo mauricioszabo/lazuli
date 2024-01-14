@@ -19,22 +19,16 @@
     "atom": ">=1.0.0 <2.0.0"
   },
   "providedServices": {
-    "everything.search": {
-      "versions": {
-        "0.1.0": "everything_provider"
-      }
-    },
     "autocomplete.provider": {
-      "versions": {
-        "4.0.0": "autocomplete_provider"
-      }
+      "versions": { "5.0.0": "autocomplete_provider" }
+    },
+    "symbol.provider": {
+      "versions": { "1.0.0": "symbol_provider" }
     }
   },
   "consumedServices": {
     "status-bar": {
-      "versions": {
-        "^1.0.0": "status_bar_consumer"
-      }
+      "versions": { "^1.0.0": "status_bar_consumer" }
     }
   },
   "devDependencies": {

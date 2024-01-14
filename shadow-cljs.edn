@@ -15,6 +15,7 @@
                 [org.rksm/suitable "0.3.2"]
                 [cider/orchard "0.5.8"]
                 [com.wsscode/pathom "2.3.1"]
+                [com.wsscode/pathom-viz-connector "2022.02.14"]
                 [org.pinkgorilla/gorilla-renderable-ui "0.1.33"]
                 [link.szabo.mauricio/duck-repled "2024-01-13.00.38"]]
 
@@ -42,7 +43,10 @@
                   chlorine.providers-consumers.autocomplete/provider
 
                   :status-bar-consumer
-                  chlorine.providers-consumers.status-bar/activate}
+                  chlorine.providers-consumers.status-bar/activate
+
+                  :symbol-provider
+                  chlorine.providers-consumers.symbols/provider}
 
         :output-dir "lib/js"
         :output-to "lib/cmds.js"
