@@ -7,7 +7,7 @@
             [repl-tooling.eval :as eval]
             [repl-tooling.editor-integration.commands :as cmds]))
 
-(def tango-complete (atom nil))
+(defonce tango-complete (atom nil))
 
 (def clj-var-regex #"[a-zA-Z0-9\-.$!?\/><*=\?_:]+")
 
@@ -30,11 +30,12 @@
   (str/escape (str prefix) re-char-escapes))
 
 (defn suggestions [{:keys [^js editor prefix] :as s}]
-  (p/let [completions (@tango-complete)
-          re-prefix (re-pattern (str ".*" (re-escape prefix)))]
-    (->> completions
-         (map (partial treat-result re-prefix))
-         clj->js)))
+  (when-let [complete @tango-complete]
+    (p/let [completions (complete)
+            re-prefix (re-pattern (str ".*" (re-escape prefix)))]
+      (->> completions
+           (map (partial treat-result re-prefix))
+           clj->js))))
 
 (defn- meta-for-var [var]
   (p/let [state (:tooling-state @state)
