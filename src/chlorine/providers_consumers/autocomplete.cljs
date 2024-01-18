@@ -14,27 +14,22 @@
 (defn- min-word-size []
   (.. js/atom -config (get "autocomplete-plus.minimumWordLength")))
 
-(defn- treat-result [re-prefix {:keys [completion/type text/contents]}]
-  (let [prefix (re-find re-prefix contents)]
-    {:text contents
-     :type type
-     :replacementPrefix prefix}))
+(defn- treat-result [prefix {:keys [completion/type text/contents]}]
+  {:text contents
+   :type type
+   :replacementPrefix prefix})
 
-(def ^:private re-char-escapes
-  (->> "\\.*+|?()[]{}$^"
-       set
-       (map (juxt identity #(str "\\" %)))
-       (into {})))
-
-(defn- re-escape [prefix]
-  (str/escape (str prefix) re-char-escapes))
-
-(defn suggestions [{:keys [^js editor prefix] :as s}]
+(defn suggestions [{:keys [^js editor] :as s}]
   (when-let [complete @tango-complete]
     (p/let [completions (complete)
-            re-prefix (re-pattern (str ".*" (re-escape prefix)))]
+            buffer (.getBuffer editor)
+            current-word (.. editor
+                             getLastCursor
+                             (getCurrentWordBufferRange #js {:wordRegex clj-var-regex}))
+            current-pos (.getCursorBufferPosition editor)
+            prefix (.getTextInBufferRange editor #js [(.-start current-word) current-pos])]
       (->> completions
-           (map (partial treat-result re-prefix))
+           (map (partial treat-result prefix))
            clj->js))))
 
 (defn- meta-for-var [var]
@@ -52,6 +47,19 @@
      (aset suggestion "description" (-> doc str (str/replace #"(\n\s+)" " ")))
      suggestion)
    (constantly nil)))
+
+(def e2 (.. (js/ce)
+            getCursorBufferPosition))
+
+(def e1 (.. (js/ce)
+            getLastCursor
+            (getCurrentWordBufferRange #js {:wordRegex clj-var-regex})))
+
+(.. (js/ce) (getTextInBufferRange #js [(.-start e1) e2]))
+(.. (js/ce) (getTextInBufferRange e1))
+
+
+
 
 (def provider
   (fn []
