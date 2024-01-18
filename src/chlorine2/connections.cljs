@@ -12,7 +12,8 @@
             [tango.ui.console :as tango-console]
             [promesa.core :as p]
             [chlorine.providers-consumers.autocomplete :as chlorine-complete]
-            [chlorine.providers-consumers.symbols :as symbols]))
+            [chlorine.providers-consumers.symbols :as symbols]
+            ["path" :as path]))
 
 (defonce connections (atom (sorted-map)))
 
@@ -193,7 +194,8 @@
                       :register-commands #(register-commands! console %)
                       :prompt (partial prn :PROMPT)
                       :get-config #(state/get-config)
-                      :editor-data #(get-editor-data)}
+                      :editor-data #(get-editor-data)
+                      :config-directory (path/join (. js/atom getConfigDirPath) "chlorine")}
            repl-state (conn/connect! host port callbacks)]
      (when repl-state
        (reset! chlorine-complete/tango-complete

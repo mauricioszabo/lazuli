@@ -44,7 +44,7 @@
           div (create-result id editor range)]
       (doto div
         (aset "classList" "chlorine result-overlay native-key-bindings")
-        (aset "innerHTML" "<div><span class='repl-tooling icon loading'></span></div>")))))
+        (aset "innerHTML" "<div class='tango icon-container'><span class='icon loading'></span></div>")))))
 
 (defn create! [data]
   (when-let [editor (-> data :editor/data :editor)]
@@ -55,7 +55,7 @@
           div (create-result id editor range)]
       (doto div
             (aset "classList" "chlorine result native-key-bindings")
-            (aset "innerHTML" "<div><span class='repl-tooling icon loading'></span></div>")))))
+            (aset "innerHTML" "<div class='tango icon-container'><span class='icon loading'></span></div>")))))
 
 (defn update! [connection-state data]
   (let [id (:id data)]
