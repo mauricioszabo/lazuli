@@ -2,11 +2,22 @@
   (:require [chlorine.ui.atom :as atom]
             [chlorine2.connections :as conn]
             [chlorine.ui.inline-results :as inline]
-            [chlorine.utils :as aux]))
+            [chlorine.utils :as aux]
+            [tango.integration.interpreter :as int]
+            ["fs" :as fs]
+            ["path" :as path]))
+
+(defn- open-config! []
+  (let [config (path/join (. js/atom getConfigDirPath) "chlorine" "config.cljs")]
+    (when-not (fs/existsSync config)
+      (try (fs/mkdirSync (path/dirname config)) (catch :default _))
+      (fs/writeFileSync config (int/default-code 'chlorine.config)))
+    (.. js/atom -workspace (open config))))
 
 (def commands
   (fn []
-   (clj->js {:connect #(conn/connect-nrepl!)
+   (clj->js {:connect conn/connect-nrepl!
+             :open-config open-config!
              :clear-inline-results #(inline/clear-results! (atom/current-editor))})))
 
 (defn deactivate []
