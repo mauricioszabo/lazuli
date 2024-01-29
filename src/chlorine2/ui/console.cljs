@@ -35,9 +35,6 @@
 
 (defn register-console! [^js subs]
   (let [scrolled? (atom true)]
-        ; con (with-meta console/console-view
-        ;       {:get-snapshot-before-update #(reset! scrolled? (console/all-scrolled?))
-        ;        :component-did-update #(console/scroll-to-end! scrolled?)})]
     (.add subs
           (.. js/atom -workspace
               (addOpener (fn [uri]
