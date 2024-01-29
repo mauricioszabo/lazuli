@@ -137,7 +137,7 @@
   (let [div (js/document.createElement "div")]
     (set! (.-id div) (:id result))
     (.. div -classList (add "content" "pending"))
-    (set! (.-innerHTML div) "<span class='tango icon loading'></span>")
+    (set! (.-innerHTML div) "<div class='tango icon-container'><span class='icon loading'></span></div>")
     (tango-console/append console div ["icon-code"])
     (js/setTimeout (fn []
                      (when (.. div -classList (contains "pending"))
@@ -184,14 +184,18 @@
    (p/let [id (-> @connections keys last inc)
            console (atom nil)
            callbacks {:on-disconnect #(disconnect! id)
+                      ;; FIXME - move everything that uses @console to a different callback?
                       :on-stdout #(tango-console/stdout @console %)
                       :on-stderr #(tango-console/stderr @console %)
                       :on-diagnostic #(diagnostic! id @console %)
                       :on-start-eval #(start-eval! @console %)
                       :on-eval #(did-eval! @console id %)
+                      ;; Use the new callback
+                      :register-commands #(register-commands! console %)
+                      ;; Below
+                      :get-console #(deref console)
                       :notify notify!
                       :open-editor open-editor
-                      :register-commands #(register-commands! console %)
                       :prompt (partial prn :PROMPT)
                       :get-config #(state/get-config)
                       :editor-data #(get-editor-data)
