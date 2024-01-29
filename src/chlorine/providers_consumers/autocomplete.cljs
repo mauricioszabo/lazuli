@@ -48,19 +48,6 @@
      suggestion)
    (constantly nil)))
 
-(def e2 (.. (js/ce)
-            getCursorBufferPosition))
-
-(def e1 (.. (js/ce)
-            getLastCursor
-            (getCurrentWordBufferRange #js {:wordRegex clj-var-regex})))
-
-(.. (js/ce) (getTextInBufferRange #js [(.-start e1) e2]))
-(.. (js/ce) (getTextInBufferRange e1))
-
-
-
-
 (def provider
   (fn []
     #js {:selector ".source.clojure"
