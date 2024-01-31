@@ -154,6 +154,7 @@
       (.. div -classList (remove "pending"))
       (let [parse (-> @connection :editor/features :result-for-renderer)
             hiccup (parse result connection)]
+        (set! (.-parsed div) hiccup)
         (rdom/render hiccup div)))))
 
 (defn- open-ro-editor [file-name line col position contents]
@@ -194,6 +195,8 @@
                       :register-commands #(register-commands! console %)
                       ;; Below
                       :get-console #(deref console)
+                      :get-rendered-results #(concat (inline/all-parsed-results)
+                                                     (tango-console/all-parsed-results @console))
                       :notify notify!
                       :open-editor open-editor
                       :prompt (partial prn :PROMPT)
