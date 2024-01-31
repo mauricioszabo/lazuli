@@ -62,6 +62,7 @@
     (when-let [{:keys [div]} (get @results id)]
       (let [parse (-> @connection-state :editor/features :result-for-renderer)
             hiccup (parse data connection-state)]
+        (swap! results assoc-in [id :parsed] hiccup)
         (rdom/render hiccup div)))))
 
 (s/defn update-result [result :- schemas/EvalResult]
