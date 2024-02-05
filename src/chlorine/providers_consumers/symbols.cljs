@@ -1,12 +1,22 @@
 (ns chlorine.providers-consumers.symbols
-  (:require [clojure.walk :as walk]))
+  (:require [clojure.walk :as walk]
+            ["path" :as path]
+            [promesa.core :as p]))
 
-(def tango-goto-symbol (atom nil))
+(def find-symbol (atom nil))
 
 (defn- get-symbols [meta]
-  (prn :META meta)
-  (def m meta)
-  [])
+  (when (and (-> meta :type (= "project-find")) @find-symbol)
+    (p/then (@find-symbol)
+            (fn [result]
+              (when result
+                (clj->js
+                 [{:name ""
+                   :type "project-find"
+                   :file (-> result :definition/filename path/basename)
+                   :directory (-> result :definition/filename path/dirname)
+                   :position {:line (:definition/row result)
+                              :column (:definition/column result 0)}}]))))))
 
 (defn- can-provide? []
   true)
@@ -24,4 +34,4 @@
        ; :filterSuggestions true
 
        :getSymbols (fn [data]
-                     (-> data js->clj walk/keywordize-keys get-symbols clj->js))})
+                     (-> data js->clj walk/keywordize-keys get-symbols))})

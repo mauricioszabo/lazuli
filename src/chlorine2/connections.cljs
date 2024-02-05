@@ -207,9 +207,8 @@
      (when repl-state
        (reset! chlorine-complete/tango-complete
                (-> @repl-state :editor/features :autocomplete))
-       #_
-       (reset! chlorine-complete/tango-complete
-               (-> @repl-state :editor/features :get-definition))
+       (reset! symbols/find-symbol
+               (-> @repl-state :editor/features :find-definition))
 
        (p/then (console/open-console (.. js/atom -config (get "chlorine.console-pos"))
                                      #((-> @repl-state :editor/commands :disconnect :command)))
