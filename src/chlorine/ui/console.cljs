@@ -1,8 +1,7 @@
 (ns chlorine.ui.console
   (:require [reagent.dom :as rdom]
-            [repl-tooling.editor-integration.renderer.console :as console]
-            [chlorine.utils :as aux]
-            [chlorine.state :refer [state]]))
+            [chlorine.ui.atom :as atom]
+            [tango.ui.console :as console]))
 
 (defonce ^:private console-pair
   (do
@@ -18,30 +17,30 @@
 (def ^:private Console (first console-pair))
 (def ^:private console (second console-pair))
 
+(defonce div (doto (js/document.createElement "div")
+                   (aset "tabIndex" 1)
+                   (.. -classList (add "native-key-bindings"))))
+
 (defn open-console [split destroy-fn]
-  (let [active (. js/document -activeElement)]
-    (aset console "destroy" destroy-fn)
-    (.. js/atom
-        -workspace
-        (open "atom://chlorine-terminal" #js {:split split
-                                              :searchAllPanes true
-                                              :activatePane false
-                                              :activateItem false})
-        (then #(.focus active)))))
+  (let [active (. js/document -activeElement)
+        _ (aset console "destroy" destroy-fn)
+        p (.. js/atom
+              -workspace
+              (open "atom://chlorine-terminal" #js {:split split
+                                                     :searchAllPanes true
+                                                     :activatePane false
+                                                     :activateItem false}))]
+    (.then p #(.focus active))
+    (.then p #(-> div .-childNodes first))))
 
 (defn register-console! [^js subs]
-  (let [scrolled? (atom true)
-        con (with-meta console/console-view
-              {:get-snapshot-before-update #(reset! scrolled? (console/all-scrolled?))
-               :component-did-update #(console/scroll-to-end! scrolled?)})]
-    (rdom/render [con "native-key-bindings"] console/div)
-    (.add subs
-          (.. js/atom -workspace
-              (addOpener (fn [uri] (when (= uri "atom://chlorine-terminal") console)))))
-    (.add subs (.. js/atom -views (addViewProvider Console (constantly console/div))))))
+  (.add subs
+        (.. js/atom -workspace
+            (addOpener (fn [uri]
+                         (when (= uri "atom://chlorine-terminal")
+                           (aset div "innerHTML" "")
+                           (.appendChild div (console/view))
+                           console)))))
+  (.add subs (.. js/atom -views (addViewProvider Console (constantly div)))))
 
-(defonce registered
-  (register-console! @aux/subscriptions))
-
-(defn result [parsed-result]
-  (console/result parsed-result (:parse @state)))
+(def registered (register-console! @atom/subscriptions))

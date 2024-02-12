@@ -1,10 +1,6 @@
 (ns chlorine.ui.inline-results
   (:require [reagent.dom :as rdom]
             [promesa.core :as p]
-            [repl-tooling.editor-integration.schemas :as schemas]
-            [schema.core :as s]
-            [repl-tooling.editor-integration.renderer :as render]
-            [chlorine.state :refer [state]]
             ["atom" :refer [TextEditor]]))
 
 (defonce ^:private results (atom {}))
@@ -35,17 +31,6 @@
           (->> (filter #(.-__divElement ^js %))
                first)))
 
-(s/defn new-result [data :- schemas/EvalData]
-  (when-let [editor (-> data :editor-data :editor)]
-    (let [id (:id data)
-          range (:range data)
-          _ (when-let [old-marker (find-result editor range)]
-              (.destroy old-marker))
-          div (create-result id editor range)]
-      (doto div
-        (aset "classList" "chlorine result-overlay native-key-bindings")
-        (aset "innerHTML" "<div class='tango icon-container'><span class='icon loading'></span></div>")))))
-
 (defn create! [data]
   (when-let [editor (-> data :editor/data :editor)]
     (let [id (:id data)
@@ -65,22 +50,22 @@
         (swap! results assoc-in [id :parsed] hiccup)
         (rdom/render hiccup div)))))
 
-(s/defn update-result [result :- schemas/EvalResult]
-  (let [id (:id result)
-        {:keys [editor range]} (:editor-data result)]
-    (when-let [{:keys [div]} (get @results id)]
-      (let [parse (-> @state :tooling-state deref :editor/features :result-for-renderer)
-            parsed (parse result)]
-        (.. div -classList (add "result" (when (-> parsed meta :error) "error")))
-        (swap! results update id assoc :parsed parsed)
-        (rdom/render [render/view-for-result parsed] div)))))
+; (s/defn update-result [result :- schemas/EvalResult]
+;   (let [id (:id result)
+;         {:keys [editor range]} (:editor-data result)]
+;     (when-let [{:keys [div]} (get @results id)]
+;       (let [parse (-> @state :tooling-state deref :editor/features :result-for-renderer)
+;             parsed (parse result)]
+;         (.. div -classList (add "result" (when (-> parsed meta :error) "error")))
+;         (swap! results update id assoc :parsed parsed)
+;         (rdom/render [render/view-for-result parsed] div)))))
 
 (defn all-parsed-results []
   (for [[_ {:keys [parsed]}] @results
         :when parsed]
     parsed))
 
-(s/defn clear-results! [curr-editor :- TextEditor]
+(defn clear-results! [curr-editor]
   (doseq [[_ {:keys [editor marker]}] @results
           :when (= (.-id curr-editor) (.-id editor))]
     (.destroy ^js marker)))

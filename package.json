@@ -20,15 +20,21 @@
   },
   "providedServices": {
     "autocomplete.provider": {
-      "versions": { "5.0.0": "autocomplete_provider" }
+      "versions": {
+        "5.0.0": "autocomplete_provider"
+      }
     },
     "symbol.provider": {
-      "versions": { "1.0.0": "symbol_provider" }
+      "versions": {
+        "1.0.0": "symbol_provider"
+      }
     }
   },
   "consumedServices": {
     "status-bar": {
-      "versions": { "^1.0.0": "status_bar_consumer" }
+      "versions": {
+        "^1.0.0": "status_bar_consumer"
+      }
     }
   },
   "devDependencies": {
@@ -39,7 +45,7 @@
     "grim": "^2.0.2",
     "react": "^16.3.0",
     "react-dom": "^16.13.0",
-    "shadow-cljs": "^2.24.0",
+    "shadow-cljs": "^2.27.3",
     "source-map-support": "^0.5.13",
     "utf-8-validate": "^5.0.2",
     "ws": "^7.1.2"

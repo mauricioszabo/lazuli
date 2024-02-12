@@ -1,40 +1,56 @@
 (ns chlorine.core
-  (:require [chlorine.utils :as aux]
-            [schema.core :as s]
-            [chlorine.ui.connection :as conn]
-            [chlorine.repl :as repl]
-            [chlorine.features.refresh :as refresh]
-            [chlorine.configs :as configs]
-            [clojure.string :as str]
-            [repl-tooling.editor-integration.renderer.console :as console]))
+  (:require [chlorine.ui.atom :as atom]
+            [chlorine.connections :as conn]
+            [chlorine.ui.inline-results :as inline]
+            [tango.integration.interpreter :as int]
+            ["fs" :as fs]
+            ["path" :as path]))
 
-(def config (configs/get-configs))
+(def config
+  (clj->js
+   {:console-pos {:type "string"
+                  :title "Position of console when connecting REPL"
+                  :enum ["right" "down"]
+                  :default "right"}
+    :eval-mode {:description "Should we evaluate Clojure or ClojureScript?"
+                :type :string
+                :enum [:prefer-clj :prefer-cljs :clj :cljs]
+                :default :prefer-clj}}))
+
+(defn- open-config! []
+  (let [config (path/join (. js/atom getConfigDirPath) "chlorine" "config.cljs")]
+    (when-not (fs/existsSync config)
+      (try (fs/mkdirSync (path/dirname config)) (catch :default _))
+      (fs/writeFileSync config (int/default-code 'chlorine.config)))
+    (.. js/atom -workspace (open config))))
 
 (def commands
   (fn []
-    (clj->js {:connect-socket-repl conn/connect-socket!
-              :connect-nrepl conn/connect-nrepl!
-              :clear-inline-results repl/clear-inline!
-              :clear-console console/clear
+   (clj->js {:connect conn/connect-nrepl!
+             :open-config open-config!
+             :clear-inline-results #(inline/clear-results! (atom/current-editor))})))
 
-              :inspect-block repl/inspect-block!
-              :inspect-top-block repl/inspect-top-block!
+(defn deactivate []
+  (doseq [[_ state] @conn/connections
+          :let [disconnect (-> @state :editor/commands :disconnect :command)]]
+    (disconnect))
+  (.dispose ^js atom/subscriptions))
 
-              :refresh-namespaces refresh/run-refresh!
-              :toggle-refresh-mode refresh/toggle-refresh})))
+(defonce ^:private old-connection (atom nil))
 
-(def aux #js {:reload aux/reload-subscriptions!
-              :connect_static repl/connect-static!
-              :observe_config configs/observe-configs!
-              :get_disposable (fn [] @aux/subscriptions)})
-
-#_#_
-(defn- ^:dev/before-load before []
-  (let [main (.. js/atom -packages (getActivePackage "chlorine") -mainModule)]
-    (.deactivate main)))
-
-(defn- ^:dev/before-load after []
+(defn- ^:dev/after-load before []
   (let [main (.. js/atom -packages (getActivePackage "chlorine") -mainModule)]
     (.activate main)
+    (when-let [{:keys [host port]} (:repl/info @old-connection)]
+      (conn/connect-nrepl! host port))
     (.. js/atom -notifications (addSuccess "Reloaded Chlorine"))
     (println "Reloaded")))
+
+(defn- ^:dev/before-load-async after [done]
+  (let [main (.. js/atom -packages (getActivePackage "chlorine") -mainModule)]
+    (reset! old-connection (some-> @conn/connections
+                                   vals
+                                   first
+                                   deref))
+    (.deactivate main)
+    (js/setTimeout done 500)))

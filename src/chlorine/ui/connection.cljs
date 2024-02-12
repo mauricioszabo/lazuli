@@ -1,7 +1,6 @@
 (ns chlorine.ui.connection
   (:require [reagent.core :as r]
             [reagent.dom :as rdom]
-            [chlorine.repl :as repl]
             [chlorine.state :refer [state]]
             [chlorine.ui.atom :as atom]
             [chlorine.utils :as aux]

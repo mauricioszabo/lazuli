@@ -1,11 +1,7 @@
 (ns chlorine.providers-consumers.autocomplete
   (:require [clojure.walk :as walk]
             [clojure.string :as str]
-            [chlorine.state :refer [state]]
-            [promesa.core :as p]
-            [repl-tooling.editor-integration.doc :as doc]
-            [repl-tooling.eval :as eval]
-            [repl-tooling.editor-integration.commands :as cmds]))
+            [promesa.core :as p]))
 
 (defonce tango-complete (atom nil))
 
@@ -32,6 +28,7 @@
            (map (partial treat-result prefix))
            clj->js))))
 
+#_
 (defn- meta-for-var [var]
   (p/let [state (:tooling-state @state)
           res (cmds/run-feature! state :eval {:text (str "(meta (resolve '" var "))")
@@ -40,6 +37,7 @@
     (:result res)))
 
 (defn- detailed-suggestion [suggestion]
+  #_
   (p/catch
    (p/let [txt (.-text suggestion)
            {:keys [arglists doc]} (meta-for-var txt)]

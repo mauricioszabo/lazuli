@@ -1,14 +1,12 @@
-(ns chlorine2.connections
-  (:require [chlorine.utils :as aux]
-            [reagent.dom :as rdom]
+(ns chlorine.connections
+  (:require [reagent.dom :as rdom]
             [tango.editor-helpers :as helpers]
             [tango.integration.connection :as conn]
             [reagent.core :as r]
             [tango.ui.edn :as edn]
-            [chlorine.state :as state]
             [chlorine.ui.atom :as atom]
             [chlorine.ui.inline-results :as inline]
-            [chlorine2.ui.console :as console]
+            [chlorine.ui.console :as console]
             [tango.ui.console :as tango-console]
             [promesa.core :as p]
             [chlorine.providers-consumers.autocomplete :as chlorine-complete]
@@ -19,7 +17,7 @@
 
 (defn destroy! [^js panel]
   (.destroy panel)
-  (aux/refocus!))
+  (atom/refocus!))
 
 (defn- treat-key [cmd panel event]
   (case (.-key event)
@@ -64,7 +62,7 @@
         panel (.. js/atom -workspace (addModalPanel #js {:item div}))]
     (set-port-from-file!)
     (rdom/render [view] div)
-    (aux/save-focus! div)
+    (atom/save-focus! div)
     (doseq [elem (-> div (.querySelectorAll "input") as-clj)]
       (aset elem "onkeydown" (partial treat-key cmd panel)))))
 
@@ -100,7 +98,7 @@
 
 (defn- add-command! [command-name command-function]
   (let [disposable (.. js/atom -commands (add "atom-text-editor"
-                                              (str "chlorine-pulsar:" command-name)
+                                              (str "chlorine:" command-name)
                                               (fn [] (command-function))))]
     (swap! commands conj disposable)))
 
@@ -175,6 +173,11 @@
       (open-ro-editor file-name line column position contents)
       (.. js/atom -workspace (open file-name position)))))
 
+(defn- get-config []
+  (let [config (.. js/atom -config (get "chlorine"))]
+    {:eval-mode (-> config (aget "eval-mode") keyword)
+     :console-pos (-> config (aget "console-pos") keyword)}))
+
 (defn connect-nrepl!
   ([]
    (conn-view (fn [panel]
@@ -200,7 +203,7 @@
                       :notify notify!
                       :open-editor open-editor
                       :prompt (partial prn :PROMPT)
-                      :get-config #(state/get-config)
+                      :get-config #(get-config)
                       :editor-data #(get-editor-data)
                       :config-directory (path/join (. js/atom getConfigDirPath) "chlorine")}
            repl-state (conn/connect! host port callbacks)]

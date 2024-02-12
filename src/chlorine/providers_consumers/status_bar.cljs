@@ -1,11 +1,11 @@
 (ns chlorine.providers-consumers.status-bar
-  (:require [reagent.dom :as rdom]
-            [chlorine.state :refer [state]]))
+  (:require [reagent.dom :as rdom]))
 
 (defonce status-bar (atom nil))
 (defonce status-bar-tile (atom nil))
 
 (defn- view []
+  #_
   [:div
    (when (some-> @state :tooling-state deref :clj/repl)
      [:span
