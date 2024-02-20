@@ -1,5 +1,5 @@
 {
-  "name": "chlorine",
+  "name": "lazuli",
   "main": "./lib/main",
   "version": "0.12.1",
   "description": "Socket REPL client for Clojure and ClojureScript",
@@ -13,7 +13,7 @@
     "nrepl",
     "shadow-cljs"
   ],
-  "repository": "https://gitlab.com/clj-editors/atom-chlorine",
+  "repository": "https://gitlab.com/clj-editors/atom-lazuli",
   "license": "MIT",
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
@@ -31,6 +31,11 @@
     }
   },
   "consumedServices": {
+    "lsp.command": {
+      "versions": {
+        "0.1.0": "lsp_consumer"
+      }
+    },
     "status-bar": {
       "versions": {
         "^1.0.0": "status_bar_consumer"
@@ -48,6 +53,7 @@
     "shadow-cljs": "^2.27.3",
     "source-map-support": "^0.5.13",
     "utf-8-validate": "^5.0.2",
+    "web-tree-sitter": "^0.20.8",
     "ws": "^7.1.2"
   },
   "dependencies": {
