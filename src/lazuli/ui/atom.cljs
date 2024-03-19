@@ -1,4 +1,4 @@
-(ns chlorine.ui.atom
+(ns lazuli.ui.atom
   (:require ["atom" :refer [CompositeDisposable]]))
 
 (defn warn [title text]

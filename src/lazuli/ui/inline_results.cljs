@@ -1,4 +1,4 @@
-(ns chlorine.ui.inline-results
+(ns lazuli.ui.inline-results
   (:require [reagent.dom :as rdom]
             [promesa.core :as p]
             ["atom" :refer [TextEditor]]))
@@ -39,7 +39,7 @@
               (.destroy old-marker))
           div (create-result id editor range)]
       (doto div
-            (aset "classList" "chlorine result native-key-bindings")
+            (aset "classList" "lazuli result native-key-bindings")
             (aset "innerHTML" "<div class='tango icon-container'><span class='icon loading'></span></div>")))))
 
 (defn update! [connection-state data]

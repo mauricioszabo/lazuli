@@ -1,6 +1,6 @@
-(ns chlorine.ui.console
+(ns lazuli.ui.console
   (:require [reagent.dom :as rdom]
-            [chlorine.ui.atom :as atom]
+            [lazuli.ui.atom :as atom]
             [tango.ui.console :as console]))
 
 (defonce ^:private console-pair
@@ -26,7 +26,7 @@
         _ (aset console "destroy" destroy-fn)
         p (.. js/atom
               -workspace
-              (open "atom://chlorine-terminal" #js {:split split
+              (open "atom://lazuli-terminal" #js {:split split
                                                      :searchAllPanes true
                                                      :activatePane false
                                                      :activateItem false}))]
@@ -37,7 +37,7 @@
   (.add subs
         (.. js/atom -workspace
             (addOpener (fn [uri]
-                         (when (= uri "atom://chlorine-terminal")
+                         (when (= uri "atom://lazuli-terminal")
                            (aset div "innerHTML" "")
                            (.appendChild div (console/view))
                            console)))))

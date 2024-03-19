@@ -1,9 +1,9 @@
-(ns chlorine.ui.connection
+(ns lazuli.ui.connection
   (:require [reagent.core :as r]
             [reagent.dom :as rdom]
-            [chlorine.state :refer [state]]
-            [chlorine.ui.atom :as atom]
-            [chlorine.utils :as aux]
+            [lazuli.state :refer [state]]
+            [lazuli.ui.atom :as atom]
+            [lazuli.utils :as aux]
             [repl-tooling.editor-helpers :as helpers]))
 
 (defonce local-state

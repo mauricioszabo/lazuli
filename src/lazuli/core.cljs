@@ -1,7 +1,7 @@
-(ns chlorine.core
-  (:require [chlorine.ui.atom :as atom]
-            [chlorine.connections :as conn]
-            [chlorine.ui.inline-results :as inline]
+(ns lazuli.core
+  (:require [lazuli.ui.atom :as atom]
+            [lazuli.connections :as conn]
+            [lazuli.ui.inline-results :as inline]
             [tango.integration.interpreter :as int]
             ["fs" :as fs]
             ["path" :as path]))
@@ -18,10 +18,10 @@
                 :default :prefer-clj}}))
 
 (defn- open-config! []
-  (let [config (path/join (. js/atom getConfigDirPath) "chlorine" "config.cljs")]
+  (let [config (path/join (. js/atom getConfigDirPath) "lazuli" "config.cljs")]
     (when-not (fs/existsSync config)
       (try (fs/mkdirSync (path/dirname config)) (catch :default _))
-      (fs/writeFileSync config (int/default-code 'chlorine.config)))
+      (fs/writeFileSync config (int/default-code 'lazuli.config)))
     (.. js/atom -workspace (open config))))
 
 (def commands
@@ -34,12 +34,12 @@
   (doseq [[_ state] @conn/connections
           :let [disconnect (-> @state :editor/commands :disconnect :command)]]
     (disconnect))
-  (.dispose ^js atom/subscriptions))
+  (.dispose ^js @atom/subscriptions))
 
 (defonce ^:private old-connection (atom nil))
 
 (defn- ^:dev/after-load before []
-  (let [main (.. js/atom -packages (getActivePackage "chlorine") -mainModule)]
+  (let [main (.. js/atom -packages (getActivePackage "lazuli") -mainModule)]
     (.activate main)
     (when-let [{:keys [host port]} (:repl/info @old-connection)]
       (conn/connect-nrepl! host port))
@@ -47,7 +47,7 @@
     (println "Reloaded")))
 
 (defn- ^:dev/before-load-async after [done]
-  (let [main (.. js/atom -packages (getActivePackage "chlorine") -mainModule)]
+  (let [main (.. js/atom -packages (getActivePackage "lazuli") -mainModule)]
     (reset! old-connection (some-> @conn/connections
                                    vals
                                    first

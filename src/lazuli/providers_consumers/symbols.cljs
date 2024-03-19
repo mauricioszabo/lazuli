@@ -1,4 +1,4 @@
-(ns chlorine.providers-consumers.symbols
+(ns lazuli.providers-consumers.symbols
   (:require [clojure.walk :as walk]
             ["path" :as path]
             [promesa.core :as p]))

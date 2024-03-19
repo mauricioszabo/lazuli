@@ -1,4 +1,4 @@
-(ns chlorine.providers-consumers.status-bar
+(ns lazuli.providers-consumers.status-bar
   (:require [reagent.dom :as rdom]))
 
 (defonce status-bar (atom nil))
@@ -23,7 +23,7 @@
 (defn activate [s]
   (swap! status-bar #(or % s))
   (let [div (. js/document (createElement "div"))]
-    (.. div -classList (add "inline-block" "chlorine"))
+    (.. div -classList (add "inline-block" "lazuli"))
     (reset! status-bar-tile (. ^js @status-bar
                               (addRightTile #js {:item div :priority 101})))
     (rdom/render [view] div)))

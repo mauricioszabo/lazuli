@@ -1,4 +1,4 @@
-(ns chlorine.providers-consumers.autocomplete
+(ns lazuli.providers-consumers.autocomplete
   (:require [clojure.walk :as walk]
             [clojure.string :as str]
             [promesa.core :as p]))
@@ -16,6 +16,7 @@
    :replacementPrefix prefix})
 
 (defn suggestions [{:keys [^js editor] :as s}]
+  #_
   (when-let [complete @tango-complete]
     (p/let [completions (complete)
             buffer (.getBuffer editor)
@@ -48,8 +49,8 @@
 
 (def provider
   (fn []
-    #js {:selector ".source.clojure"
-         :disableForSelector ".source.clojure .comment"
+    #js {:selector ".source.ruby"
+         :disableForSelector ".source.ruby .comment"
 
          :inclusionPriority 100
          :excludeLowerPriority false
