@@ -7,7 +7,7 @@
   (do
     (deftype ^js ConsoleClass []
       Object
-      (getTitle [_] "Chlorine REPL")
+      (getTitle [_] "Lazuli REPL")
       (destroy [this]
         (-> (filter #(.. ^js % getItems (includes this))
                     (.. js/atom -workspace getPanes))

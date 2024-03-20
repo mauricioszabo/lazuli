@@ -40,13 +40,13 @@ To add a command on the editor, you first need to wait for the package to activa
 
 ```javascript
 // This waits for the package to load
-atom.packages.activatePackage('chlorine').then(package => {
+atom.packages.activatePackage('lazuli').then(package => {
   // This picks up the "main module" of the package
   const pkg = package.mainModule
 
-  // This will add a command called "chlorine:explain-schema". You can check
+  // This will add a command called "lazuli:explain-schema". You can check
   //it on the command pallete
-  atom.commands.add('atom-text-editor', 'chlorine:explain-schema', function() {
+  atom.commands.add('atom-text-editor', 'lazuli:explain-schema', function() {
     // pkg.ext.get_var() gets the current var under the cursor. There's also
     //pkg.ext.get_block() and pkg.ext.get_top_block()
     const result = pkg.ext.get_var()
@@ -71,11 +71,11 @@ atom.packages.activatePackage('chlorine').then(package => {
 There's only ONE api that's supported only by Atom's `init.js` or `init.coffee` and not by ClojureScript, that's the ability to connect to a Socket REPL without using the popup UI. To do so, the same rules apply: you have to wait for the package to activate, then register a command that will connect to a specific host/port:
 
 ```javascript
-atom.packages.activatePackage('chlorine').then(package => {
+atom.packages.activatePackage('lazuli').then(package => {
   // This picks up the "main module" of the package
   const pkg = package.mainModule
 
-  atom.commands.add('atom-workspace', 'chlorine:connect-on-5555-port', () => {
+  atom.commands.add('atom-workspace', 'lazuli:connect-on-5555-port', () => {
     pkg.connect_socket('localhost', 5555)
   })
 })
@@ -116,10 +116,10 @@ To render an interactive result, you must render a map that contains, at least, 
 
 **In Javascript**:
 ```javascript
-atom.packages.activatePackage('chlorine').then(package => {
+atom.packages.activatePackage('lazuli').then(package => {
   const pkg = package.mainModule
 
-  atom.commands.add('atom-text-editor', 'chlorine:re-print', function() {
+  atom.commands.add('atom-text-editor', 'lazuli:re-print', function() {
     const result = pkg.ext.get_block()
     if(result.text) {
       const cmd = `{:html (pr-str (quote ${result.text}))}`
@@ -149,7 +149,7 @@ But the interesting part is that you can send `:state` and `:fns` keys to the in
 
 **In Javascript**:
 ```js
-pkg = atom.packages.getActivePackage('chlorine').mainModule
+pkg = atom.packages.getActivePackage('lazuli').mainModule
 pkg.ext.evaluate_interactive(`
   '{:html [:div "Clicked " [:button {:on-click ?incr} ?state] " times" ]
     :state 0

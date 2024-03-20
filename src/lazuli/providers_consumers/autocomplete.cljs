@@ -1,51 +1,69 @@
 (ns lazuli.providers-consumers.autocomplete
   (:require [clojure.walk :as walk]
             [clojure.string :as str]
-            [promesa.core :as p]))
+            [promesa.core :as p]
+            [lazuli.code-treatment :as treat]
+            [orbit.evaluation :as eval]
+            ["atom" :refer [Range]]))
 
-(defonce tango-complete (atom nil))
-
-(def clj-var-regex #"[a-zA-Z0-9\-.$!?\/><*=\?_:]+")
+(defonce state (atom nil))
 
 (defn- min-word-size []
   (.. js/atom -config (get "autocomplete-plus.minimumWordLength")))
 
-(defn- treat-result [prefix {:keys [completion/type text/contents]}]
-  {:text contents
-   :type type
-   :replacementPrefix prefix})
+(defn- re-escape [string]
+  (str/replace string #"[\|\\\{\}\(\)\[\]\^\$\+\*\?\.\-\/]" "\\$&"))
 
-(defn suggestions [{:keys [^js editor] :as s}]
-  #_
-  (when-let [complete @tango-complete]
-    (p/let [completions (complete)
-            buffer (.getBuffer editor)
-            current-word (.. editor
-                             getLastCursor
-                             (getCurrentWordBufferRange #js {:wordRegex clj-var-regex}))
-            current-pos (.getCursorBufferPosition editor)
-            prefix (.getTextInBufferRange editor #js [(.-start current-word) current-pos])]
-      (->> completions
-           (map (partial treat-result prefix))
-           clj->js))))
+(defn- get-prefix [^js editor candidate]
+  (let [non-word-chars (distinct (re-seq #"[^\w]" candidate))
+        reg (re-pattern (str "[\\w" (re-escape (str/join "" non-word-chars)) "]+"))
+        ^js cursor (-> editor .getCursors first)
+        word-range (new Range
+                     (.getBeginningOfCurrentWordBufferPosition cursor #js {:wordRegex reg})
+                     (.getBufferPosition cursor))]
+    (.getTextInRange editor word-range)))
 
-#_
-(defn- meta-for-var [var]
-  (p/let [state (:tooling-state @state)
-          res (cmds/run-feature! state :eval {:text (str "(meta (resolve '" var "))")
-                                              :auto-detect true
-                                              :aux true})]
-    (:result res)))
+(defn- treat-result [editor [kind suggestion]]
+  (let [icon-name (case kind
+                    "pub_method" "eye status-renamed"
+                    "priv_method" "stop status-removed"
+                    "prot_method" "lock status-modified"
+                    "instance_var" "mention status-renamed"
+                    "class_var" "mention status-renamed"
+                    "constant" "package status-renamed"
+                    "question")]
+    {:text suggestion
+     :iconHTML (str "<i class='icon-" icon-name "'></i>")
+     :replacementPrefix (get-prefix editor suggestion)}))
 
-(defn- detailed-suggestion [suggestion]
-  #_
-  (p/catch
-   (p/let [txt (.-text suggestion)
-           {:keys [arglists doc]} (meta-for-var txt)]
-     (aset suggestion "rightLabel" (str arglists))
-     (aset suggestion "description" (-> doc str (str/replace #"(\n\s+)" " ")))
-     suggestion)
-   (constantly nil)))
+(defn suggestions [{:keys [editor activatedManually]}]
+  (def editor editor)
+  ; (when activatedManually)
+  (p/let [dissected (treat/dissect-editor-contents @state)
+          watch-id (treat/watch-id-for-code @state)
+          evaluator (treat/eql @state :repl/evaluator)
+          method-code (str "__self__.public_methods.map { |m| ['pub_method', m.to_s] } + "
+                           "__self__.private_methods.map { |m| ['priv_method', m.to_s] } + "
+                           "__self__.protected_methods.map { |m| ['prot_method', m.to_s] }")
+          code (case (:type dissected)
+                 "constant" "::Object.constants.map { |i| ['constant', i.to_s] }"
+                 "instance_variable" "instance_variables.map { |i| ['instance_var', i.to_s] }"
+                 "class_variable" "class_variables.map { |i| ['class_var', i.to_s] }"
+                 "identifier" (str/replace method-code #"__self__\." "")
+                 "scope_resolution" (str (:callee dissected) ".constants.map { |i| ['constant', i.to_s] }")
+                 "call" (if (-> dissected :sep (= "::"))
+                          (str (:callee dissected) ".constants.map { |i| ['constant', i.to_s] }")
+                          (str/replace method-code #"__self__" (:callee dissected))))]
+
+    (p/catch
+     (p/let [res (try (eval/evaluate evaluator
+                                     {:code code :watch_id watch-id}
+                                     {:plain true :options {:op "eval"}})
+                   (catch :default _))]
+       (clj->js (map #(treat-result editor %) res)))
+     (constantly nil))))
+
+(defn- detailed-suggestion [suggestion])
 
 (def provider
   (fn []
@@ -60,6 +78,6 @@
          :filterSuggestions true
 
          :getSuggestions (fn [data]
-                           (-> data js->clj walk/keywordize-keys suggestions clj->js))
+                           (-> data js->clj walk/keywordize-keys suggestions))
 
          :getSuggestionDetailsOnSelect #(detailed-suggestion %)}))

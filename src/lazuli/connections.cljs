@@ -15,7 +15,9 @@
             [tango.commands-to-repl.pathom :as pathom]
             [lazuli.providers-consumers.autocomplete :as lazuli-complete]
             [lazuli.providers-consumers.symbols :as symbols]
-            ["path" :as path]))
+            [lazuli.code-treatment :as treat]
+            ["path" :as path]
+            ["fs" :as fs]))
 
 (defonce connections (atom (sorted-map)))
 
@@ -108,7 +110,8 @@
 
 (def ^:private unused-cmds
   #{:run-test-for-var :run-tests-in-ns
-    :load-file :evaluate-block})
+    :load-file :evaluate-block
+    :go-to-var-definition})
 
 (defn- update-breakpoint! [state result hit?]
   (prn :UPDATE-BREAKPOINT result)
@@ -330,9 +333,13 @@ created. If you only send the `:id`, the watch element for that ID will be remov
           {:keys [editor/contents repl/evaluator]} (eql [:editor/contents :repl/evaluator])
           current-text (:text/contents contents)
           row (-> contents :text/range ffirst)
-          line (nth (str/split-lines current-text) row)
-          {:keys [method]} (method-name current-text row)
-          watch-id (get-in @state [:repl/watch method :watches 0])
+          final-col (count (nth (str/split-lines current-text) row))
+          dissected (treat/dissect-editor-contents (:text/contents contents)
+                                                   [[row final-col] [row final-col]])
+          line (cond->> (str (:identifier dissected) (:params dissected))
+                 (:sep dissected) (str (:callee dissected) (:sep dissected))
+                 (:assign dissected) (str (:assign dissected) " "))
+          watch-id (treat/watch-id-for-code state current-text row)
           on-start-eval (-> @state :editor/callbacks :on-start-eval)
           on-eval (-> @state :editor/callbacks :on-eval)]
     (on-start-eval editor-info)
@@ -347,12 +354,34 @@ created. If you only send the `:id`, the watch element for that ID will be remov
         (on-eval final-result))
       (on-eval (merge editor-info
                       ^:tango/error {:error "We haven't watched this method yet - results will be unreliable"})))))
+
+(defn- goto-definition [state]
+  (p/let [dissected (treat/dissect-editor-contents state)
+          watch-id (treat/watch-id-for-code state)
+          evaluator (treat/eql state :repl/evaluator)
+          code (case (:type dissected)
+                 "call" (str (:callee dissected) ".method(:" (:identifier dissected) ").source_location")
+                 "identifier" (str "method(:" (:identifier dissected) ").source_location")
+                 "constant" (str "Object.const_source_location(" (:identifier dissected) ".name)")
+                 "scope_resolution" (str (:callee dissected) ".const_source_location(" (pr-str (:identifier dissected)) ")")
+                 nil)]
+    (when code
+      (p/let [[file row] (eval/evaluate evaluator
+                                        {:code code :watch_id watch-id}
+                                        {:plain true :options {:op "eval"}})]
+        (when (fs/existsSync file)
+          (.. js/atom -workspace (open file
+                                       #js {:initialLine (dec row)
+                                            :searchAllPanes true})))))))
+
 (defn- register-commands! [console commands state]
+  (def state state)
   (remove-all-commands!)
   (add-command! "clear-console" #(tango-console/clear @console))
   (add-command! "evaluate-line" #(eval-line state))
   (add-command! "load-file-and-inspect" #(load-file-and-inspect state))
   (add-command! "load-file" #(load-file-cmd state))
+  (add-command! "go-to-var-definition" #(goto-definition state))
 
   (doseq [[key {:keys [command]}] commands
           :when (not (unused-cmds key))]
@@ -430,19 +459,12 @@ created. If you only send the `:id`, the watch element for that ID will be remov
 
 (defn- on-out [state key output]
   (when (= "hit_watch" key)
-    (prn :HIT)
     (p/let [eql (-> @state :editor/features :eql)
             contents (p/-> (eql {:file/filename (:file output)}
                                 [:file/contents])
                            :file/contents
                            :text/contents)
             {:keys [method row]} (method-name contents (- (:line output) 2))]
-            ; captures-res (. pathom/parent-query captures
-            ;                (.. pathom/parser (parse contents) -rootNode)
-            ;                #js {:row (- (:line output) 2) :column 0})
-            ; [parents [node]] (split-with #(= "parent" (.-name %)) captures-res)
-            ; {:keys [method row]} (wrap-node (map #(.-node %) parents) node)]
-      (prn :M method)
       (update-watch! state {:id (to-id method)
                             :text method
                             :icon "icon-eye"
@@ -485,8 +507,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                       :config-directory (path/join (. js/atom getConfigDirPath) "lazuli")}
            repl-state (conn/connect! host port callbacks)]
      (when repl-state
-       (reset! lazuli-complete/tango-complete
-               (-> @repl-state :editor/features :autocomplete))
+       (reset! lazuli-complete/state repl-state)
        (reset! symbols/find-symbol
                (-> @repl-state :editor/features :find-definition))
 

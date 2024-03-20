@@ -1,6 +1,6 @@
-![Chlorine](docs/chlorine-logo.png)
+![Chlorine](docs/lazuli-logo.png)
 
-[![CircleCI](https://circleci.com/gh/mauricioszabo/atom-chlorine.svg?style=svg)](https://circleci.com/gh/mauricioszabo/atom-chlorine)
+[![CircleCI](https://circleci.com/gh/mauricioszabo/atom-lazuli.svg?style=svg)](https://circleci.com/gh/mauricioszabo/atom-lazuli)
 
 Cl + Atom = Chlorine
 
@@ -54,39 +54,39 @@ This package does not register any keybindings to avoid keybinding conflict issu
 **If you use vim-mode-plus:**
 ```cson
 'atom-text-editor.vim-mode-plus.normal-mode[data-grammar="source clojure"]':
-  'g f':          'chlorine:go-to-var-definition'
-  'ctrl-d':       'chlorine:doc-for-var'
-  'space c':      'chlorine:connect-socket-repl'
-  'space l':      'chlorine:clear-console'
-  'shift-enter':  'chlorine:evaluate-block'
-  'ctrl-enter':   'chlorine:evaluate-top-block'
-  'ctrl-c':       'chlorine:break-evaluation'
-  'space space':  'chlorine:clear-inline-results'
-  'space x':      'chlorine:run-tests-in-ns'
-  'space t':      'chlorine:run-test-for-var'
+  'g f':          'lazuli:go-to-var-definition'
+  'ctrl-d':       'lazuli:doc-for-var'
+  'space c':      'lazuli:connect-socket-repl'
+  'space l':      'lazuli:clear-console'
+  'shift-enter':  'lazuli:evaluate-block'
+  'ctrl-enter':   'lazuli:evaluate-top-block'
+  'ctrl-c':       'lazuli:break-evaluation'
+  'space space':  'lazuli:clear-inline-results'
+  'space x':      'lazuli:run-tests-in-ns'
+  'space t':      'lazuli:run-test-for-var'
 
 'atom-text-editor.vim-mode-plus.insert-mode[data-grammar="source clojure"]':
-  'shift-enter': 'chlorine:evaluate-block'
-  'ctrl-enter': 'chlorine:evaluate-top-block'
+  'shift-enter': 'lazuli:evaluate-block'
+  'ctrl-enter': 'lazuli:evaluate-top-block'
 ```
 
 **If you don't use vim bindings:**
 ```cson
 'atom-text-editor[data-grammar="source clojure"]':
-  'ctrl-; y':       'chlorine:connect-socket-repl'
-  'ctrl-; e':       'chlorine:disconnect'
-  'ctrl-; k':       'chlorine:clear-console'
-  'ctrl-; f':       'chlorine:load-file'
-  'ctrl-; b':       'chlorine:evaluate-block'
-  'ctrl-; B':       'chlorine:evaluate-top-block'
-  'ctrl-; i':       'chlorine:inspect-block'
-  'ctrl-; I':       'chlorine:inspect-top-block'
-  'ctrl-; s':       'chlorine:evaluate-selection'
-  'ctrl-; c':       'chlorine:break-evaluation'
-  'ctrl-; S':       'chlorine:source-for-var'
-  'ctrl-; d':       'chlorine:doc-for-var'
-  'ctrl-; x':       'chlorine:run-tests-in-ns'
-  'ctrl-; t':       'chlorine:run-test-for-var'
+  'ctrl-; y':       'lazuli:connect-socket-repl'
+  'ctrl-; e':       'lazuli:disconnect'
+  'ctrl-; k':       'lazuli:clear-console'
+  'ctrl-; f':       'lazuli:load-file'
+  'ctrl-; b':       'lazuli:evaluate-block'
+  'ctrl-; B':       'lazuli:evaluate-top-block'
+  'ctrl-; i':       'lazuli:inspect-block'
+  'ctrl-; I':       'lazuli:inspect-top-block'
+  'ctrl-; s':       'lazuli:evaluate-selection'
+  'ctrl-; c':       'lazuli:break-evaluation'
+  'ctrl-; S':       'lazuli:source-for-var'
+  'ctrl-; d':       'lazuli:doc-for-var'
+  'ctrl-; x':       'lazuli:run-tests-in-ns'
+  'ctrl-; t':       'lazuli:run-test-for-var'
 ```
 ## How to work with ClojureScript
 For now, it only works with Shadow-CLJS or ClojureScript implementations like Lumo or Plank that exposes a ClojureScript socket REPL.
@@ -96,7 +96,7 @@ With Lumo, you fire up lumo with `lumo -n 3322` to start a socket REPL on port `
 With Shadow-CLJS, after watching (or after starting a server, or anything that starts a socket REPL) you need to run the compiled javascript file in the output directory (configured in shadow-cljs.edn) - either with `node <...>` (if it's a node script) or by opening the browser in a page that includes the script (if you're targetting browser), connect with "Connect Socket REPL" (Chlorine will auto-detect the port - you don't need to change it), and run the command "Connect Embedded". Then you can run code on `.cljs` files too. For ClojureScript its also recommended to enable "experimental features" (on Chlorine settings) for better experience.
 
 > ### WARNING
-> Do not evaluate the `ns` form in Shadow-CLJS. Shadow keeps your namespaces reloaded all the time, and sometimes re-evaluating then can lead to strange issues. If you **do evaluate** the ns form and get errors, just save the current file and Shadow will hot-reload it, and things will be fine. For more info, see: https://github.com/mauricioszabo/atom-chlorine/issues/213
+> Do not evaluate the `ns` form in Shadow-CLJS. Shadow keeps your namespaces reloaded all the time, and sometimes re-evaluating then can lead to strange issues. If you **do evaluate** the ns form and get errors, just save the current file and Shadow will hot-reload it, and things will be fine. For more info, see: https://github.com/mauricioszabo/atom-lazuli/issues/213
 
 ### Detection
 Chlorine will try to detect the current file extension, falling back to `.clj` if the file is not saved. With ClojureScript, it'll only evaluate `.cljs` files, and it'll use the Clojure REPL to evaluate `.clj` and `.cljc` files. You can override this behavior in the package's configuration to one of the following:
@@ -120,13 +120,13 @@ To register the submodule. More info on [Developing](docs/developing.md) documen
 ### Code Contributors
 
 This project exists thanks to all the people who contribute. [[Contribute](docs/developing.md)].
-<a href="https://github.com/mauricioszabo/atom-chlorine/graphs/contributors"><img src="https://opencollective.com/atom-chlorine/contributors.svg?width=890&button=false" /></a>
+<a href="https://github.com/mauricioszabo/atom-lazuli/graphs/contributors"><img src="https://opencollective.com/atom-lazuli/contributors.svg?width=890&button=false" /></a>
 
 ### Financial Contributors
 
 Become a financial contributor and help us sustain our community. Contribute:
 
-<a href="https://opencollective.com/atom-chlorine">OpenCollective: <img src="https://opencollective.com/atom-chlorine/tiers/backers.svg?avatarHeight=60&width=800"></a>
+<a href="https://opencollective.com/atom-lazuli">OpenCollective: <img src="https://opencollective.com/atom-lazuli/tiers/backers.svg?avatarHeight=60&width=800"></a>
 
 <a href="https://www.patreon.com/bePatron?u=34618740">Patreon: <img alt="become a patron" src="https://c5.patreon.com/external/logo/become_a_patron_button.png" height="35px" class="patreon"></a>
 
@@ -135,11 +135,11 @@ Become a financial contributor and help us sustain our community. Contribute:
 
 #### Individuals
 
-<a href="https://opencollective.com/atom-chlorine"><img src="https://opencollective.com/atom-chlorine/individuals.svg?width=890"></a>
+<a href="https://opencollective.com/atom-lazuli"><img src="https://opencollective.com/atom-lazuli/individuals.svg?width=890"></a>
 
 
 #### Organizations
 
-Support this project with your organization. Your logo will show up here with a link to your website. [[Contribute](https://opencollective.com/atom-chlorine/contribute)]
+Support this project with your organization. Your logo will show up here with a link to your website. [[Contribute](https://opencollective.com/atom-lazuli/contribute)]
 
-<a href="https://opencollective.com/atom-chlorine/organization/0/website"><img src="https://opencollective.com/atom-chlorine/organization/0/avatar.svg"></a>
+<a href="https://opencollective.com/atom-lazuli/organization/0/website"><img src="https://opencollective.com/atom-lazuli/organization/0/avatar.svg"></a>

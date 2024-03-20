@@ -9,7 +9,6 @@
 
                 ;; Tango dependencies
                 [reagent "1.2.0"]
-                [funcool/promesa "6.0.0"]
                 [org.babashka/sci "0.8.40"]
                 [link.szabo.mauricio/duck-repled "2024-02-12.04.17"]]
 
@@ -19,30 +18,32 @@
                      :keep-native-requires true
                      :keep-as-require #{"atom"}}
 
-        :dev {:closure-defines {chlorine.aux/TESTS true
+        :dev {:closure-defines {lazuli.aux/TESTS true
                                 com.wsscode.pathom.misc.INCLUDE_SPECS false}}
         :compiler-options {:warnings {:fn-deprecated false}}
-        :exports {:deactivate chlorine.core/deactivate
+        :exports {:deactivate lazuli.core/deactivate
 
-                  :config chlorine.core/config
-                  :commands chlorine.core/commands
-                  :aux chlorine.ui.atom/aux
-                  ; :repl chlorine.repl/exports
+                  :config lazuli.core/config
+                  :commands lazuli.core/commands
+                  :aux lazuli.ui.atom/aux
+                  ; :repl lazuli.repl/exports
 
                   :everything-provider
-                  chlorine.providers-consumers.everything/activate
+                  lazuli.providers-consumers.everything/activate
 
                   :autocomplete-provider
-                  chlorine.providers-consumers.autocomplete/provider
+                  lazuli.providers-consumers.autocomplete/provider
 
                   :status-bar-consumer
-                  chlorine.providers-consumers.status-bar/activate
+                  lazuli.providers-consumers.status-bar/activate
 
                   :symbol-provider
-                  chlorine.providers-consumers.symbols/provider}
+                  lazuli.providers-consumers.symbols/provider
+
+                  :lsp-consumer
+                  lazuli.providers-consumers.lsp/activate}
 
         :output-dir "lib/js"
         :output-to "lib/cmds.js"
-        :devtools {:preloads [;orbit.serializer-test
+        :devtools {:preloads []}}}};orbit.serializer-test
                               ;flow-storm.api
-                              ]}}}}

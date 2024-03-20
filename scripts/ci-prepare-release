@@ -2,7 +2,7 @@
 
 git tag `echo "$CIRCLE_BRANCH-source" | sed s/release-//`
 
-git config --global user.email "circleci@chlorine.plugin" &&
+git config --global user.email "circleci@lazuli.plugin" &&
 git config --global user.name "CircleCI Automated Build" &&
 
 git checkout -b release-prepare-DELETE-THIS &&

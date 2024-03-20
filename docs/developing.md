@@ -7,7 +7,7 @@ Chlorine builds on [REPL-Tooling](https://github.com/mauricioszabo/repl-tooling/
 Clone this repo and run the following commands:
 
 ```bash
-cd atom-chlorine # or the name you gave when cloning
+cd atom-lazuli # or the name you gave when cloning
 ./scripts/setup
 npx shadow-cljs watch dev
 ```
@@ -39,11 +39,11 @@ Probably all simpler tests will be on REPL-Tooling. For Chlorine, there are two 
 ### Simple inline tests
 Because of some Atom limitations, is kinda difficult to write tests on ClojureScript (or any other language besides JS or CoffeeScript). On other packages I wrote, I tried multiple approaches and they all got me multiple false positives/negatives, so for ClojureScript you can write tests inline, together with implementation. They will show on Atom's dev console when you save the file, so it's a fast feedback.
 
-Also, you probably don't want then running in production builds, so there's a development variable that toggles when to compile or not this code: `chlorine.aux/TESTS`. If you want to write some tests, you can use the following template:
+Also, you probably don't want then running in production builds, so there's a development variable that toggles when to compile or not this code: `lazuli.aux/TESTS`. If you want to write some tests, you can use the following template:
 
 ```clojure
-(ns chlorine.some-ns
-  (:require [chlorine.aux :as aux]))
+(ns lazuli.some-ns
+  (:require [lazuli.aux :as aux]))
 
 (when aux/TESTS
   (testing "this needs to fail"

@@ -28,6 +28,6 @@ COPY . /work
 RUN npm install
 RUN npx shadow-cljs release dev --debug
 RUN rm -R node_modules
-RUN ln -s /work /root/.atom/packages/chlorine
+RUN ln -s /work /root/.atom/packages/lazuli
 
 CMD bash -c 'Xvfb -screen 0 1024x768x24+32 :80 & bash -m ./scripts/test'
