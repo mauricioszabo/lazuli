@@ -110,7 +110,7 @@
 
 (def ^:private unused-cmds
   #{:run-test-for-var :run-tests-in-ns
-    :load-file :evaluate-block
+    :load-file :evaluate-block :evaluate-selection
     :go-to-var-definition})
 
 (defn- update-breakpoint! [state result hit?]
@@ -158,9 +158,9 @@ created. If you only send the `:id`, the watch element for that ID will be remov
   [state {:keys [id text] :as watch}]
   (let [console ((:get-console (:editor/callbacks @state)))
         chars (count text)
-        text (if (< chars 35)
+        text (if (< chars 55)
                text
-               (str "..." (subs text (- chars 35))))
+               (str "..." (subs text (- chars 55))))
         link-elem (delay
                    (doto (js/document.createElement "a")
                          (-> .-innerText (set! text))
@@ -355,6 +355,36 @@ created. If you only send the `:id`, the watch element for that ID will be remov
       (on-eval (merge editor-info
                       ^:tango/error {:error "We haven't watched this method yet - results will be unreliable"})))))
 
+(defn- eval-selection [state]
+  (p/let [eql (-> @state :editor/features :eql)
+          id (str (gensym "eval-"))
+          editor-info (eql [{:editor/contents [:editor/filename
+                                               :text/range
+                                               :editor/data
+                                               :repl/namespace]}])
+          editor-info (-> editor-info
+                          :editor/contents
+                          (dissoc :com.wsscode.pathom3.connect.runner/attribute-errors)
+                          (assoc :id id))
+          {:keys [editor/contents repl/evaluator]} (eql [:repl/evaluator
+                                                         {:editor/contents [:text/contents
+                                                                            :text/range
+                                                                            :text/selection]}])
+          current-text (:text/contents contents)
+          selection (-> contents :text/selection :text/contents)
+          watch-id (treat/watch-id-for-code state current-text (-> contents :text/range ffirst))
+          on-start-eval (-> @state :editor/callbacks :on-start-eval)
+          on-eval (-> @state :editor/callbacks :on-eval)]
+    (on-start-eval editor-info)
+    (p/let [res (eval/evaluate evaluator
+                               {:code selection :watch_id watch-id :id id}
+                               {:options {:op "eval"}})
+            res (merge res editor-info)
+            final-result (if (contains? res :result)
+                           res
+                           (with-meta res {:tango/error true}))]
+      (on-eval final-result))))
+
 (defn- goto-definition [state]
   (p/let [dissected (treat/dissect-editor-contents state)
           watch-id (treat/watch-id-for-code state)
@@ -379,6 +409,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
   (remove-all-commands!)
   (add-command! "clear-console" #(tango-console/clear @console))
   (add-command! "evaluate-line" #(eval-line state))
+  (add-command! "evaluate-selection" #(eval-selection state))
   (add-command! "load-file-and-inspect" #(load-file-and-inspect state))
   (add-command! "load-file" #(load-file-cmd state))
   (add-command! "go-to-var-definition" #(goto-definition state))
