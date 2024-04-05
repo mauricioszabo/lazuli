@@ -1,6 +1,6 @@
 {:source-paths ["src"
-                "repl-tooling/src" "repl-tooling/test"
-                "repl-tooling/orbit/src" "repl-tooling/orbit/test"
+                ; "repl-tooling/src" "repl-tooling/test"
+                ; "repl-tooling/orbit/src" "repl-tooling/orbit/test"
                 "tango/src"
                 "sci.configs/src"
                 "repl-tooling/resources"]
@@ -10,6 +10,7 @@
                 ;; Tango dependencies
                 [reagent "1.2.0"]
                 [org.babashka/sci "0.8.40"]
+                [instaparse "1.4.12"]
                 [link.szabo.mauricio/duck-repled "2024-02-12.04.17"]]
 
  :builds
