@@ -16,6 +16,7 @@
             [lazuli.providers-consumers.autocomplete :as lazuli-complete]
             [lazuli.providers-consumers.symbols :as symbols]
             [lazuli.code-treatment :as treat]
+            [lazuli.ui.interface :as interface]
             ["path" :as path]
             ["fs" :as fs]))
 
@@ -207,56 +208,62 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                      (let [[kind name] (.-children parent)]
                        (str (.-text kind) " " (.-text name))))
                    parents)
-        ^js node-body (->> node
-                           .-children
-                           (filter #(-> % .-type (= "body_statement")))
-                           first)
-        node-def (->> node .-children
-                      (take-while #(-> % .-type (not= "body_statement")))
-                      (map #(.-text %))
+        [node-def [node-body possible-body]] (->> node
+                                                  .-children
+                                                  (split-with #(not (contains? #{"body_statement" "="} (.-type %)))))
+        def-text (->> node-def
+                      (map #(.-text ^js %))
                       (str/join " "))
-        node-children (some->> node-body .-children (mapv #(.-text %)))
+        node-children (cond
+                        (nil? node-body) ["nil"]
+
+                        (= "body_statement" (.-type node-body))
+                        (->> node-body .-children (mapv #(.-text %)))
+
+                        :single-line-method
+                        [(.-text possible-body)])
         parent-name (str/replace (str/join "::" texts) #"(class|module) " "")
         method-name (str parent-name
                          (if (-> capture .-name (= "method")) "#" ".")
-                         (-> node .-children (nth 1) .-text))
-        node-lines (when node-children
-                     (conj (pop node-children)
-                           (str "__ret = begin;" (peek node-children) "\nend")
-                           (str "NREPL.watch!(binding, " (pr-str method-name) ")")
-                           "__ret"))
+                         (->> node-def rest (filter #(-> % .-type (= "identifier"))) first .-text))
+        node-lines (cons (str "NREPL.watch!(binding, " (pr-str method-name) ")") node-children)
         num-parents (count parents)
         original-row (-> node .-startPosition .-row)]
     {:row original-row
      :adapted-row (- original-row num-parents)
      :method method-name
      :text (str (str/join "\n" texts)
-                "\n" node-def "\n" (str/join "\n" node-lines) "\nend\n"
+                "\n" def-text "\n" (str/join "\n" node-lines) "\nend\n"
                 (str/join "\n" (repeat num-parents "end")))}))
 
 (defn- get-all-watches [state]
   (p/let [eql (-> @state :editor/features :eql)
           data (p/-> (eql [:editor/data]) :editor/data)
-          captures-res (. pathom/parent-query captures
-                         (.. pathom/parser (parse (:contents data)) -rootNode))]
-    (->> captures-res
-         (reduce (fn [{:keys [parents texts] :as acc} ^js capture]
-                   (let [last-parent (some-> (not-empty parents) peek)
-                         start-index (.. capture -node -startIndex)
-                         parents (->> parents
-                                      (filter #(<= start-index (.-endIndex ^js %)))
-                                      vec)
-                         acc (assoc acc :parents parents)]
-                     (println (.. capture -node -text))
-                     (if (-> capture .-name (= "parent"))
-                       (update acc :parents conj (.-node capture))
-                       (update acc :texts conj (wrap-node parents capture)))))
-            {:parents [] :texts []})
-         :texts)))
+          ^js parsed (.parse pathom/parser (:contents data))
+          captures-res (. pathom/parent-query captures (.-rootNode parsed))
+
+          res
+          (->> captures-res
+               (reduce (fn [{:keys [parents texts] :as acc} ^js capture]
+                         (let [last-parent (some-> (not-empty parents) peek)
+                               start-index (.. capture -node -startIndex)
+                               parents (->> parents
+                                            (filter #(<= start-index (.-endIndex ^js %)))
+                                            vec)
+                               acc (assoc acc :parents parents)]
+                           (if (-> capture .-name (= "parent"))
+                             (update acc :parents conj (.-node capture))
+                             (update acc :texts conj (wrap-node parents capture)))))
+                       {:parents [] :texts []})
+               :texts)]
+    (.delete parsed)
+    res))
 
 (defn- to-id [old-id]
   (-> old-id
       (str/replace #"#" "_HASH_")
+      (str/replace #"/" "_SLASH_")
+      (str/replace #"\\" "_BSLASH_")
       (str/replace #":" "_TWODOTS_")
       (str/replace #"\." "_DOT_")))
 
@@ -300,25 +307,6 @@ created. If you only send the `:id`, the watch element for that ID will be remov
 
     (eval/evaluate evaluator (-> res :editor/contents :text/contents) {:filename file})))
 
-(defn- method-name [source row]
-  (let [parsed (.parse pathom/parser source)
-        captures-res (. pathom/parent-query captures (.-rootNode parsed) #js {:row row :column 0})
-        [parents [capture]] (split-with #(= "parent" (.-name %)) captures-res)
-        ^js node (.-node capture)
-        texts (map (fn [parent]
-                     (let [[kind name] (.. parent -node -children)]
-                       (str (.-text kind) " " (.-text name))))
-                   parents)
-        parent-name (str/replace (str/join "::" texts) #"(class|module) " "")
-        original-row (-> node .-startPosition .-row)
-        is-method? (-> capture .-name (= "method"))
-        method-part (-> node .-children (nth 1) .-text)]
-    (.delete parsed)
-    {:row original-row
-     :method (str parent-name
-                  (if is-method? "#" ".")
-                  method-part)}))
-
 (defn- eval-line [state]
   (p/let [eql (-> @state :editor/features :eql)
           id (str (gensym "eval-"))
@@ -343,17 +331,18 @@ created. If you only send the `:id`, the watch element for that ID will be remov
           on-start-eval (-> @state :editor/callbacks :on-start-eval)
           on-eval (-> @state :editor/callbacks :on-eval)]
     (on-start-eval editor-info)
-    (if watch-id
-      (p/let [res (eval/evaluate evaluator
-                                 {:code line :watch_id watch-id :id id}
-                                 {:options {:op "eval"}})
-              res (merge res editor-info)
-              final-result (if (contains? res :result)
-                             res
-                             (with-meta res {:tango/error true}))]
-        (on-eval final-result))
-      (on-eval (merge editor-info
-                      ^:tango/error {:error "We haven't watched this method yet - results will be unreliable"})))))
+    (p/let [res (eval/evaluate evaluator
+                               (cond-> {:id id
+                                        :code line
+                                        :file (-> editor-info :editor/filename)
+                                        :line (-> editor-info :text/range ffirst)}
+                                 watch-id (assoc :watch_id watch-id))
+                               {:options {:op "eval"}})
+            res (merge res editor-info)
+            final-result (if (contains? res :result)
+                           res
+                           (with-meta res {:tango/error true}))]
+      (on-eval final-result))))
 
 (defn- eval-selection [state]
   (p/let [eql (-> @state :editor/features :eql)
@@ -377,7 +366,11 @@ created. If you only send the `:id`, the watch element for that ID will be remov
           on-eval (-> @state :editor/callbacks :on-eval)]
     (on-start-eval editor-info)
     (p/let [res (eval/evaluate evaluator
-                               {:code selection :watch_id watch-id :id id}
+                               (cond-> {:code selection
+                                        :id id
+                                        :file (-> editor-info :editor/filename)
+                                        :line (-> editor-info :text/range ffirst)}
+                                 watch-id (assoc :watch_id watch-id))
                                {:options {:op "eval"}})
             res (merge res editor-info)
             final-result (if (contains? res :result)
@@ -389,32 +382,59 @@ created. If you only send the `:id`, the watch element for that ID will be remov
   (p/let [dissected (treat/dissect-editor-contents state)
           watch-id (treat/watch-id-for-code state)
           evaluator (treat/eql state :repl/evaluator)
+          callee (:callee dissected "self")
+          editor-info (p/-> (treat/eql state [{:editor/contents [:editor/filename
+                                                                 :text/range]}])
+                            :editor/contents)
           code (case (:type dissected)
-                 "call" (str (:callee dissected) ".method(:" (:identifier dissected) ").source_location")
-                 "identifier" (str "method(:" (:identifier dissected) ").source_location")
+                 "call" (str callee ".class.__lazuli_source_location(:" (:identifier dissected) ")")
+                 "identifier" (str callee ".class.__lazuli_source_location(:" (:identifier dissected) ")")
                  "constant" (str "Object.const_source_location(" (:identifier dissected) ".name)")
-                 "scope_resolution" (str (:callee dissected) ".const_source_location(" (pr-str (:identifier dissected)) ")")
+                 "scope_resolution" (str callee ".const_source_location(" (pr-str (:identifier dissected)) ")")
                  nil)]
     (when code
       (p/let [[file row] (eval/evaluate evaluator
-                                        {:code code :watch_id watch-id}
+                                        (cond-> {:code code
+                                                 :file (-> editor-info :editor/filename)
+                                                 :line (-> editor-info :text/range ffirst)}
+                                          watch-id (assoc :watch_id watch-id))
                                         {:plain true :options {:op "eval"}})]
         (when (fs/existsSync file)
           (.. js/atom -workspace (open file
                                        #js {:initialLine (dec row)
                                             :searchAllPanes true})))))))
 
-(defn- register-commands! [console commands state]
+(defn- add-watch-cmd [state]
+  (p/let [{:text/keys [contents range]} (treat/eql state :editor/contents)
+          original-row (ffirst range)
+          {:keys [method row] :as a} (treat/method-name contents original-row)
+          ^js editor (.. js/atom -workspace getActiveTextEditor)
+          ^js buffer (.getBuffer editor)
+          ^js line (.lineForRow buffer original-row)
+          indent (re-find #"^\s+" line)]
+    (.setTextInRange buffer
+                     (clj->js [[original-row 0] [original-row ##Inf]])
+                     (str indent "NREPL.watch!(binding, '" method "')\n" line))))
+
+(defn- observe-editor! [state ^js editor]
+  (when editor
+    (when-let [display! (-> @state :editor/features :display-watches)]
+      (when-let [path (not-empty (.getPath editor))]
+        (display! path)))))
+
+(defn- register-commands! [console cmds state]
   (def state state)
   (remove-all-commands!)
+  (swap! commands conj (.. js/atom -workspace (observeActiveTextEditor #(observe-editor! state %))))
   (add-command! "clear-console" #(tango-console/clear @console))
   (add-command! "evaluate-line" #(eval-line state))
   (add-command! "evaluate-selection" #(eval-selection state))
   (add-command! "load-file-and-inspect" #(load-file-and-inspect state))
   (add-command! "load-file" #(load-file-cmd state))
   (add-command! "go-to-var-definition" #(goto-definition state))
+  (add-command! "add-watch-command" #(add-watch-cmd state))
 
-  (doseq [[key {:keys [command]}] commands
+  (doseq [[key {:keys [command]}] cmds
           :when (not (unused-cmds key))]
     (add-command! (name key) command)))
 
@@ -477,7 +497,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                    (.setCursorBufferPosition #js [line (or col 0)])))))
 
 (defn- open-editor [{:keys [file-name line contents column]}]
-  (let [position (clj->js (cond-> {:initialLine line :searchAllPanes true}
+  (let [position (clj->js (cond-> {:initialLine line :searchAllPanes true :location "center" :split "left"}
                                   column (assoc :initialColumn column)))]
     (if contents
       (open-ro-editor file-name line column position contents)
@@ -488,14 +508,57 @@ created. If you only send the `:id`, the watch element for that ID will be remov
     {:eval-mode (-> config (aget "eval-mode") keyword)
      :console-pos (-> config (aget "console-pos") keyword)}))
 
+(defn- summarize-path [path]
+  (let [[_ relative] (.. js/atom -project (relativizePath path))
+        splitted (str/split relative path/sep)
+        [prefix [file]] (split-at (-> splitted count dec) splitted)]
+    (str (str/join path/sep (map #(subs % 0 1) prefix))
+         path/sep file)))
+
+(defn- append-trace! [console file row]
+  (let [traces (.querySelector console "div.traces")
+        crumbs (.-children traces)
+        txt (str (summarize-path file) ":" (inc row))
+        a (doto (js/document.createElement "a")
+                (-> .-innerText (set! txt))
+                (-> .-onclick (set! (fn [^js evt]
+                                      (.preventDefault evt)
+                                      (open-editor {:file-name file
+                                                    :line row})))))
+        span (js/document.createElement "span")]
+    (when (-> crumbs .-length (> 0))
+      (.append span " > "))
+    (.appendChild span a)
+    (.appendChild traces span)))
+
+(defn- update-traces! [state]
+  (let [traces (:repl/tracings @state)
+        console ((:get-console (:editor/callbacks @state)))
+        query (.. console (querySelector "input.search-trace") -value)
+        reg (re-pattern query)
+        filtered (->> traces
+                      (filter #(re-find reg (:file %)))
+                      (take-last 20))]
+    (set! (.. console (querySelector "div.traces") -innerText) "")
+    (doseq [{:keys [file row]} filtered]
+      (append-trace! console file row))))
+
 (defn- on-out [state key output]
+  (when (= "hit_auto_watch" key)
+    (let [{:keys [file line]} output
+          old-timeout (:repl/tracings-timeout @state)]
+      (swap! state update :repl/tracings #(cond-> (conj % {:file file :row line})
+                                            (-> % count (> 2000)) (subvec 1)))
+      (js/clearTimeout old-timeout)
+      (swap! state assoc :repl/tracings-timeout (js/setTimeout #(update-traces! state)))))
+
   (when (= "hit_watch" key)
     (p/let [eql (-> @state :editor/features :eql)
             contents (p/-> (eql {:file/filename (:file output)}
                                 [:file/contents])
                            :file/contents
                            :text/contents)
-            {:keys [method row]} (method-name contents (- (:line output) 2))]
+            {:keys [method row]} (treat/method-name contents (- (:line output) 2))]
       (update-watch! state {:id (to-id method)
                             :text method
                             :icon "icon-eye"
@@ -504,6 +567,79 @@ created. If you only send the `:id`, the watch element for that ID will be remov
       (swap! state assoc-in [:repl/watch method] {:element/id (to-id method)
                                                   :watch/id method
                                                   :watches [(:id output)]}))))
+
+; (declare on-stdout)
+#_
+(defn- stacktraced-stdout [console ^js div out]
+  (if-let [[match before file row] (re-find #"(.+?)([^\s:]+):(\d+)" out)]
+    (let [span (js/document.createElement "span")
+          a (js/document.createElement "a")]
+      (set! (.-innerText span) before)
+      (set! (.-innerText a) (str file ":" row))
+      (set! (.-onclick a) (fn [^js evt]
+                            (.preventDefault evt)
+                            (open-editor {:file-name file
+                                          :line (dec (js/parseInt row))})))
+      (tango-console/append @console
+                            (doto div
+                                  (.appendChild span)
+                                  (.appendChild a))
+                            ["icon-quote"])
+      (on-stdout console (subs out (count match))))
+    (.appendChild div (doto (js/document.createElement "span") (.append out)))))
+
+(defn- big-stdout-thing [console out]
+  (let [div (js/document.createElement "div")
+        span (tango-console/create-content-span @console (str (subs out 0 80)
+                                                              "\033[0m"))
+        a (js/document.createElement "a")]
+    (set! (.-innerText a) "...")
+    (set! (.-onclick a) (fn [^js evt]
+                          (.preventDefault evt)
+                          (set! (.-innerHTML div) "")
+                          (.. div -classList (add "content" "out"))
+                          (.appendChild div (tango-console/create-content-span @console out))))
+    (.appendChild div span)
+    (.appendChild div a)
+    div))
+
+(defn- on-stdout [console out]
+  ; (when (re-find #"AWS::Account Exists" out)
+  ;   (def o out))
+  (let [stacktraces (re-find #"(.+?)([^\s:]+):(\d+)" out)]
+    (cond
+      ; stacktraces
+      ; (stacktraced-stdout console (js/document.createElement "div") out)
+
+      (-> out count (< 100))
+      (tango-console/stdout @console out)
+
+      (re-find #"\s*\033" out)
+      (tango-console/append @console
+                            (big-stdout-thing console out)
+                            ["icon-quote"])
+
+      :normal
+      (def s (tango-console/stdout @console out)))))
+
+(defn- display-watches [state file]
+  (p/let [evaluator (treat/eql state :repl/evaluator)
+          res (eval/evaluate evaluator
+                             {:file file}
+                             {:plain true :options {:op "watches_for_file"}})
+          rows (get res "rows")
+          con ((:get-console (:editor/callbacks @state)))]
+
+    #_(when (seq rows))
+    (set! (.. con (querySelector ".watches") -innerHTML) "")
+    (doseq [row rows
+            :let [txt (str file ":" (inc row))]]
+      (update-watch! state {:id (to-id txt)
+                            :text txt
+                            :icon "icon-eye"
+                            :file file
+                            :row row}))
+    rows))
 
 (defn connect-nrepl!
   ([]
@@ -517,8 +653,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
            callbacks {:on-disconnect #(disconnect! id)
                       ;; FIXME - move everything that uses @console to a different callback?
                       :on-stdout (fn on-out [%]
-                                   (prn :STDOUT!!!!)
-                                   (tango-console/stdout @console %))
+                                   (on-stdout console %))
                       :on-stderr #(tango-console/stderr @console %)
                       :on-diagnostic #(diagnostic! id @console %)
                       :on-start-eval #(start-eval! @console %)
@@ -538,16 +673,21 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                       :config-directory (path/join (. js/atom getConfigDirPath) "lazuli")}
            repl-state (conn/connect! host port callbacks)]
      (when repl-state
+       (swap! repl-state assoc-in [:editor/features :display-watches] #(display-watches repl-state %))
+       (swap! repl-state assoc :repl/tracings [])
        (reset! lazuli-complete/state repl-state)
-       (reset! symbols/find-symbol
-               (-> @repl-state :editor/features :find-definition))
+       (reset! symbols/find-symbol (-> @repl-state :editor/features :find-definition))
 
        (p/then (console/open-console (.. js/atom -config (get "lazuli.console-pos"))
                                      #((-> @repl-state :editor/commands :disconnect :command)))
                (fn [c]
                  (set! (.. c (querySelector ".details") -innerHTML)
-                   (str "<div class='title'>Watch Points</div><div class='watches'></div>"
+                   (str "<div class='title'>Trace</div>"
+                        "<div><input class='search-trace input-text'></div>"
+                        "<div class='traces'></div>"
+                        "<div class='title'>Watch Points</div><div class='watches'></div>"
                         "<div class='title'>Breakpoint</div><div class='breakpoint'></div>"))
+                 (set! (.. c (querySelector "input.search-trace") -onchange) #(update-traces! repl-state))
                  (tango-console/clear c)
                  (reset! console c)))
        (swap! connections assoc id repl-state)))))

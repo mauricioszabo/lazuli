@@ -25,6 +25,7 @@
 
 (defn- treat-result [editor [kind suggestion]]
   (let [icon-name (case kind
+                    "local_var" "chevron-right status-modified"
                     "pub_method" "eye status-renamed"
                     "priv_method" "stop status-removed"
                     "prot_method" "lock status-modified"
@@ -37,12 +38,14 @@
      :replacementPrefix (get-prefix editor suggestion)}))
 
 (defn suggestions [{:keys [editor activatedManually]}]
-  (def editor editor)
-  ; (when activatedManually)
   (p/let [dissected (treat/dissect-editor-contents @state)
           watch-id (treat/watch-id-for-code @state)
-          evaluator (treat/eql @state :repl/evaluator)
-          method-code (str "__self__.public_methods.map { |m| ['pub_method', m.to_s] } + "
+          res (treat/eql @state [:repl/evaluator
+                                 {:editor/contents [:editor/filename :text/range]}])
+          evaluator (:repl/evaluator res)
+          editor-info (:editor/contents res)
+          method-code (str "binding.local_variables.map { |m| ['local_var', m.to_s] } + "
+                           "__self__.public_methods.map { |m| ['pub_method', m.to_s] } + "
                            "__self__.private_methods.map { |m| ['priv_method', m.to_s] } + "
                            "__self__.protected_methods.map { |m| ['prot_method', m.to_s] }")
           code (case (:type dissected)
@@ -57,7 +60,10 @@
 
     (p/catch
      (p/let [res (try (eval/evaluate evaluator
-                                     {:code code :watch_id watch-id}
+                                     (cond-> {:code code
+                                              :file (-> editor-info :editor/filename)
+                                              :line (-> editor-info :text/range ffirst)}
+                                       watch-id (assoc :watch_id watch-id))
                                      {:plain true :options {:op "eval"}})
                    (catch :default _))]
        (clj->js (map #(treat-result editor %) res)))

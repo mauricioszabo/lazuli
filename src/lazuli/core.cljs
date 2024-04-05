@@ -30,10 +30,11 @@
              :open-config open-config!
              :clear-inline-results #(inline/clear-results! (atom/current-editor))})))
 
-(defn deactivate []
-  (doseq [[_ state] @conn/connections
-          :let [disconnect (-> @state :editor/commands :disconnect :command)]]
-    (disconnect))
+(defn deactivate [disconnect?]
+  (when disconnect?
+    (doseq [[_ state] @conn/connections
+            :let [disconnect (-> @state :editor/commands :disconnect :command)]]
+      (disconnect)))
   (.dispose ^js @atom/subscriptions))
 
 (defonce ^:private old-connection (atom nil))
@@ -41,16 +42,18 @@
 (defn- ^:dev/after-load before []
   (let [main (.. js/atom -packages (getActivePackage "lazuli") -mainModule)]
     (.activate main)
+    #_
     (when-let [{:keys [host port]} (:repl/info @old-connection)]
       (conn/connect-nrepl! host port))
-    (.. js/atom -notifications (addSuccess "Reloaded Chlorine"))
+    (.. js/atom -notifications (addSuccess "Reloaded Lazuli"))
     (println "Reloaded")))
 
 (defn- ^:dev/before-load-async after [done]
   (let [main (.. js/atom -packages (getActivePackage "lazuli") -mainModule)]
+    #_
     (reset! old-connection (some-> @conn/connections
                                    vals
                                    first
                                    deref))
-    (.deactivate main)
+    ; (.deactivate main)
     (js/setTimeout done 500)))

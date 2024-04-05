@@ -7,6 +7,7 @@
             [orbit.serializer :as serializer]
             [orbit.meta-helper :as meta-helper]
             [clojure.walk :as walk]
+            [lazuli.ruby-parsing :as rp]
             ["net" :as net]))
 
 (defn- no-wrap-form? [code]
@@ -92,8 +93,9 @@
    (if (:no-wrap opts)
      {:id id
       :result (try
-                (cond->> (edn/read-string {:default tagged-literal} value))
-                (catch :default _ (symbol value)))}
+                ; (rp/parse-ruby-res value)
+                (edn/read-string {:default tagged-literal} value)
+                (catch :default _ value #_(rp/->RubyVariable value)))}
      (let [decoded (-> value serializer/deserialize :result)]
        (assoc decoded :id id)))))
 

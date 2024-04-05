@@ -72,24 +72,29 @@
      (.delete parsed)
      dissected)))
 
+(defn- translate-captures-into-method [captures-res]
+  (let [[parents [capture]] (split-with #(= "parent" (.-name %)) captures-res)]
+    (when capture
+      (let [^js node (.-node capture)
+            texts (map (fn [parent]
+                         (let [[kind name] (.. parent -node -children)]
+                           (str (.-text kind) " " (.-text name))))
+                       parents)
+            parent-name (str/replace (str/join "::" texts) #"(class|module) " "")
+            original-row (-> node .-startPosition .-row)
+            is-method? (-> capture .-name (= "method"))
+            method-part (-> node .-children (nth 1) .-text)]
+        {:row original-row
+         :method (str parent-name
+                      (if is-method? "#" ".")
+                      method-part)}))))
+
 (defn method-name [source row]
   (let [parsed (.parse pathom/parser source)
         captures-res (. pathom/parent-query captures (.-rootNode parsed) #js {:row row :column 0})
-        [parents [capture]] (split-with #(= "parent" (.-name %)) captures-res)
-        ^js node (.-node capture)
-        texts (map (fn [parent]
-                     (let [[kind name] (.. parent -node -children)]
-                       (str (.-text kind) " " (.-text name))))
-                   parents)
-        parent-name (str/replace (str/join "::" texts) #"(class|module) " "")
-        original-row (-> node .-startPosition .-row)
-        is-method? (-> capture .-name (= "method"))
-        method-part (-> node .-children (nth 1) .-text)]
+        result (when (seq captures-res) (translate-captures-into-method captures-res))]
     (.delete parsed)
-    {:row original-row
-     :method (str parent-name
-                  (if is-method? "#" ".")
-                  method-part)}))
+    result))
 
 (defn eql [state query]
    (p/let [eql (-> @state :editor/features :eql)
