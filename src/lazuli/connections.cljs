@@ -17,6 +17,7 @@
             [lazuli.providers-consumers.symbols :as symbols]
             [lazuli.code-treatment :as treat]
             [lazuli.ui.interface :as interface]
+            [com.wsscode.pathom3.connect.operation :as connect]
             ["path" :as path]
             ["fs" :as fs]))
 
@@ -239,8 +240,8 @@ created. If you only send the `:id`, the watch element for that ID will be remov
 (defn- get-all-watches [state]
   (p/let [eql (-> @state :editor/features :eql)
           data (p/-> (eql [:editor/data]) :editor/data)
-          ^js parsed (.parse pathom/parser (:contents data))
-          captures-res (. pathom/parent-query captures (.-rootNode parsed))
+          ^js parsed (.parse treat/parser (:contents data))
+          captures-res (. treat/parent-query captures (.-rootNode parsed))
 
           res
           (->> captures-res
@@ -386,9 +387,15 @@ created. If you only send the `:id`, the watch element for that ID will be remov
           editor-info (p/-> (treat/eql state [{:editor/contents [:editor/filename
                                                                  :text/range]}])
                             :editor/contents)
+          callee-class (str callee
+                            (if (-> dissected :callee-type #{"scope_resolution" "constant"})
+                              ".singleton_class"
+                              ".class"))
+          identifier (str (:identifier dissected)
+                          (when (:assign dissected) "="))
           code (case (:type dissected)
-                 "call" (str callee ".class.__lazuli_source_location(:" (:identifier dissected) ")")
-                 "identifier" (str callee ".class.__lazuli_source_location(:" (:identifier dissected) ")")
+                 "call" (str callee-class ".__lazuli_source_location(:" identifier ")")
+                 "identifier" (str callee-class ".__lazuli_source_location(:" identifier ")")
                  "constant" (str "Object.const_source_location(" (:identifier dissected) ".name)")
                  "scope_resolution" (str callee ".const_source_location(" (pr-str (:identifier dissected)) ")")
                  nil)]
@@ -606,7 +613,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
 (defn- on-stdout [console out]
   ; (when (re-find #"AWS::Account Exists" out)
   ;   (def o out))
-  (let [stacktraces (re-find #"(.+?)([^\s:]+):(\d+)" out)]
+  ; (let [stacktraces (re-find #"(.+?)([^\s:]+):(\d+)" out)]
     (cond
       ; stacktraces
       ; (stacktraced-stdout console (js/document.createElement "div") out)
@@ -620,7 +627,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                             ["icon-quote"])
 
       :normal
-      (def s (tango-console/stdout @console out)))))
+      (def s (tango-console/stdout @console out))))
 
 (defn- display-watches [state file]
   (p/let [evaluator (treat/eql state :repl/evaluator)
@@ -640,6 +647,71 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                             :file file
                             :row row}))
     rows))
+
+(defn- to-remove [flat-out]
+  (let [out-str (str flat-out)]
+    (or (re-find #"(:var|:repl/kind|:repl/cljs-env|:repl/namespace|:definition|:completions)" out-str)
+        (re-find #":text/(ns|current|.*block|.*namespace)" out-str))))
+
+(defn- remove-non-ruby-resolvers [resolvers]
+  (->> resolvers
+       (remove (fn [resolver]
+                 (->> resolver :config ::connect/output
+                      (some (fn [out]
+                              (if (map? out)
+                                (->> out keys first to-remove)
+                                (to-remove out)))))))))
+
+(defrecord AdaptedREPL [evaluator]
+  eval/REPL
+  (-evaluate [this code options]
+    (prn :OPTS options)
+    (eval/-evaluate evaluator code (assoc options :no-wrap true)))
+  (-break [this kind] (eval/-break evaluator kind))
+  (-close [this] (eval/-close evaluator))
+  (-is-closed [this] (eval/-is-closed evaluator)))
+
+(defn- adapted-repl [editor-state {:repl/keys [repl/evaluator]}]
+  (p/let [{:keys [editor/callbacks]} @editor-state
+          config-dir (:config/directory @editor-state)
+          editor-data ((:editor-data callbacks))
+          is-config? (-> config-dir
+                         (path/relative (:filename editor-data))
+                         (str/starts-with? "..")
+                         not)]
+     {:repl/evaluator (if is-config?
+                        (-> @editor-state :editor/features :interpreter/evaluator)
+                        (->AdaptedREPL evaluator))}))
+                        ; (:repl/evaluator @editor-state))}))
+                        ; (-> @editor-state :editor/features :interpreter/evaluator)
+                        ; (->AdaptedREPL (:repl/evaluator @editor-state)))}))
+
+(defn- resolvers-from-state [editor-state]
+  (p/let [{:keys [editor/callbacks]} @editor-state
+          config-dir (:config/directory @editor-state)
+          editor-data ((:editor-data callbacks))
+          config ((:get-config callbacks))
+          not-found :com.wsscode.pathom3.connect.operation/unknown-value
+          is-config? (-> config-dir
+                         (path/relative (:filename editor-data))
+                         (str/starts-with? "..")
+                         not)]
+    {:editor/data (or editor-data not-found)
+     :config/eval-as (if is-config? :clj (:eval-mode config))
+     :config/project-paths (vec (:project-paths config))
+     :repl/evaluator (if is-config?
+                       (-> @editor-state :editor/features :interpreter/evaluator)
+                       (->AdaptedREPL (:repl/evaluator @editor-state)))
+     :config/repl-kind (-> @editor-state :repl/info :kind)}))
+
+(defn- update-resolvers! [state]
+  (swap! state update-in [:pathom :global-resolvers] remove-non-ruby-resolvers)
+  (let [add-pathom-resolvers (-> @state :editor/features :pathom/add-pathom-resolvers)
+        remove-resolver (-> @state :editor/features :pathom/remove-resolvers)
+        add-resolver (-> @state :editor/features :pathom/add-resolver)
+        compose-resolver (-> @state :editor/features :pathom/compose-resolver)]
+    (add-pathom-resolvers [treat/top-blocks treat/line treat/completions])
+    (compose-resolver {:inputs [] :outputs [:repl/evaluator]} #(adapted-repl state %))))
 
 (defn connect-nrepl!
   ([]
@@ -677,6 +749,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
        (swap! repl-state assoc :repl/tracings [])
        (reset! lazuli-complete/state repl-state)
        (reset! symbols/find-symbol (-> @repl-state :editor/features :find-definition))
+       (update-resolvers! repl-state)
 
        (p/then (console/open-console (.. js/atom -config (get "lazuli.console-pos"))
                                      #((-> @repl-state :editor/commands :disconnect :command)))
