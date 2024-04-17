@@ -1,22 +1,18 @@
 {
   "name": "lazuli",
   "main": "./lib/main",
-  "version": "0.12.1",
-  "description": "Socket REPL client for Clojure and ClojureScript",
+  "version": "0.0.1",
+  "description": "Interactive nREPL client for Ruby",
   "keywords": [
-    "clojure",
-    "clojurescript",
-    "clojureclr",
-    "babashka",
+    "ruby",
     "repl",
     "interactive",
-    "nrepl",
-    "shadow-cljs"
+    "nrepl"
   ],
-  "repository": "https://gitlab.com/clj-editors/atom-lazuli",
+  "repository": "https://gitlab.com/clj-editors/lazuli",
   "license": "MIT",
   "engines": {
-    "atom": ">=1.0.0 <2.0.0"
+    "atom": ">=1.115.2024041019 <2.0.0"
   },
   "providedServices": {
     "autocomplete.provider": {
