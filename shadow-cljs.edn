@@ -10,7 +10,6 @@
                 ;; Tango dependencies
                 [reagent "1.2.0"]
                 [org.babashka/sci "0.8.40"]
-                [instaparse "1.4.12"]
                 [link.szabo.mauricio/duck-repled "2024-02-12.04.17"]]
 
  :builds
