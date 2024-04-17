@@ -20,7 +20,7 @@ And then the diagram will be rendered on the editor.
 So, to register a diagram, you'll run the command `Chlorine: Open Config`, and then add the following code:
 
 ```clojure
-(def ^:private render-svg (render/js-require "./chlorine/nomno"))
+(def ^:private render-svg (render/js-require "./lazuli/nomno"))
 (defn- diag [txt]
   (doto (render/create-tag "div")
    (render/set-html (render-svg txt))))
@@ -35,7 +35,7 @@ So, to register a diagram, you'll run the command `Chlorine: Open Config`, and t
 
 ```
 
-Now, you'll need to prepare the `chlorine/nomno` code. It's just a single javascript with a single line, but it's a good practice to not add `node_modules` directory in the Atom's config root directory. So, what you need to do is go to the Atom's configuration directory (if you don't know where it is, just locate, on Chlorine's config file, at the bottom left corner, the file name. It'll probably be something like `~/.atom/chlorine-config.cljs`. You can click this file, and it'll copy the full path of the file - including the directory, so you can just enter this directory over a terminal), and there create a folder called `chlorine`. Inside this `chlorine` folder, run `npm install nomnoml`, and then create the `nomno.js` file with the following content:
+Now, you'll need to prepare the `lazuli/nomno` code. It's just a single javascript with a single line, but it's a good practice to not add `node_modules` directory in the Atom's config root directory. So, what you need to do is go to the Atom's configuration directory (if you don't know where it is, just locate, on Chlorine's config file, at the bottom left corner, the file name. It'll probably be something like `~/.atom/lazuli-config.cljs`. You can click this file, and it'll copy the full path of the file - including the directory, so you can just enter this directory over a terminal), and there create a folder called `lazuli`. Inside this `lazuli` folder, run `npm install nomnoml`, and then create the `nomno.js` file with the following content:
 
 ```js
 module.exports = require('nomnoml').renderSvg;

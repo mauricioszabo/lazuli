@@ -25,7 +25,7 @@ const typeCommand = async (cmd) => {
 
 const evalCommand = async (cmd) => {
   await typeCommand(cmd)
-  await sendCommand("chlorine:evaluate-block")
+  await sendCommand("lazuli:evaluate-block")
 }
 
 const gotoTab = async (fileName) => {
@@ -63,14 +63,14 @@ describe('Atom should open and evaluate code', function () {
 
   it('connects to editor', async () => {
     assert.ok(await gotoTab('test.clj'))
-    await sendCommand("chlorine:connect-clojure-socket-repl")
+    await sendCommand("lazuli:connect-clojure-socket-repl")
     await(1000)
     assert.ok(await haveSelector('div*=Connect to Socket REPL'))
     await app.client.execute("document.querySelector('atom-panel input').focus()")
     await app.client.keys("Tab")
     await app.client.keys("3333")
     await app.client.keys("Enter")
-    assert.ok(await haveSelector("div.chlorine"))
+    assert.ok(await haveSelector("div.lazuli"))
     assert.ok(await gotoTab('test.clj'))
   })
 
@@ -80,17 +80,17 @@ describe('Atom should open and evaluate code', function () {
       assert.ok(await gotoTab('test.clj'))
       await sendCommand("vim-mode-plus:activate-insert-mode")
       await typeCommand("(ns user.test1)")
-      await sendCommand("chlorine:evaluate-top-block")
+      await sendCommand("lazuli:evaluate-top-block")
       assert.ok(await haveSelector('div*=nil'))
 
       await evalCommand("(str (+ 90 120))")
-      await sendCommand("chlorine:evaluate-block")
+      await sendCommand("lazuli:evaluate-block")
       assert.ok(await haveSelector(`//div[contains(., '"210"')]`))
     })
 
     it('goes to definition of var', async () => {
       await typeCommand("defn")
-      await sendCommand("chlorine:go-to-var-definition")
+      await sendCommand("lazuli:go-to-var-definition")
       await time(100)
       await gotoTab('core.clj')
       assert.ok(await haveSelector(`//div[contains(., ':arglists')]`))
@@ -100,7 +100,7 @@ describe('Atom should open and evaluate code', function () {
     // FIXME: InkTerminal currently is inside a Canvas :(
     it('shows definition of var', async () => {
       await gotoTab('test.clj')
-      await sendCommand('chlorine:source-for-var')
+      await sendCommand('lazuli:source-for-var')
       assert.ok(await haveSelector(`//div[contains(., 'fdecl')]`))
     })
 
@@ -108,14 +108,14 @@ describe('Atom should open and evaluate code', function () {
       await sendCommand('inline-results:clear-all')
       await evalCommand(`(Thread/sleep 2000)`)
       await time(400)
-      await sendCommand("chlorine:break-evaluation")
+      await sendCommand("lazuli:break-evaluation")
       assert.ok(await haveSelector(`//*[contains(., '"Evaluation interrupted"')]`))
     })
 
     it('shows function doc', async () => {
       await sendCommand('inline-results:clear-all')
       await typeCommand("\n\nstr")
-      await sendCommand("chlorine:doc-for-var")
+      await sendCommand("lazuli:doc-for-var")
       assert.ok(await haveText("With no args, returns the empty string. With one arg x, returns\n"))
     })
 
@@ -141,9 +141,9 @@ describe('Atom should open and evaluate code', function () {
 
   describe('when connecting to ClojureScript inside Clojure', () => {
     it('connects to embedded ClojureScript', async () => {
-      await sendCommand('chlorine:clear-console')
+      await sendCommand('lazuli:clear-console')
       assert.ok(await gotoTab('test2.cljs'))
-      await sendCommand('chlorine:connect-embeded-clojurescript-repl')
+      await sendCommand('lazuli:connect-embeded-clojurescript-repl')
       assert.ok(await haveText("ClojureScript REPL connected"))
     })
 
@@ -164,7 +164,7 @@ describe('Atom should open and evaluate code', function () {
     it('shows function doc', async () => {
       await sendCommand('inline-results:clear-all')
       await typeCommand("str")
-      await sendCommand("chlorine:doc-for-var")
+      await sendCommand("lazuli:doc-for-var")
       assert.ok(await haveText("With no args, returns the empty string"))
     })
 

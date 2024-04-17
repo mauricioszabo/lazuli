@@ -5,5 +5,5 @@
 
  :socket-repl {:port 3333}
  :builds {:tests {:target :node-script
-                  :main chlorine.tests/main
+                  :main lazuli.tests/main
                   :output-to "lib/main.js"}}}

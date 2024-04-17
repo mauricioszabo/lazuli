@@ -1,41 +1,37 @@
 {
-  "name": "chlorine",
+  "name": "lazuli",
   "main": "./lib/main",
-  "version": "0.12.1",
-  "description": "Socket REPL client for Clojure and ClojureScript",
+  "version": "0.0.1",
+  "description": "Interactive nREPL client for Ruby",
   "keywords": [
-    "clojure",
-    "clojurescript",
-    "clojureclr",
-    "clojerl",
-    "babashka",
-    "lumo",
-    "plank",
-    "joker",
+    "ruby",
     "repl",
     "interactive",
-    "socket repl",
-    "nrepl",
-    "clj-kondo"
+    "nrepl"
   ],
-  "repository": "https://gitlab.com/clj-editors/atom-chlorine",
+  "repository": "https://gitlab.com/clj-editors/lazuli",
   "license": "MIT",
   "engines": {
-    "atom": ">=1.0.0 <2.0.0"
+    "atom": ">=1.115.2024041019 <2.0.0"
   },
   "providedServices": {
-    "everything.search": {
-      "versions": {
-        "0.1.0": "everything_provider"
-      }
-    },
     "autocomplete.provider": {
       "versions": {
-        "4.0.0": "autocomplete_provider"
+        "5.0.0": "autocomplete_provider"
+      }
+    },
+    "symbol.provider": {
+      "versions": {
+        "1.0.0": "symbol_provider"
       }
     }
   },
   "consumedServices": {
+    "lsp.command": {
+      "versions": {
+        "0.1.0": "lsp_consumer"
+      }
+    },
     "status-bar": {
       "versions": {
         "^1.0.0": "status_bar_consumer"
@@ -50,9 +46,10 @@
     "grim": "^2.0.2",
     "react": "^16.3.0",
     "react-dom": "^16.13.0",
-    "shadow-cljs": "^2.14.2",
+    "shadow-cljs": "^2.28.3",
     "source-map-support": "^0.5.13",
     "utf-8-validate": "^5.0.2",
+    "web-tree-sitter": "^0.20.8",
     "ws": "^7.1.2"
   },
   "dependencies": {

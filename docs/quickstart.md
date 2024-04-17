@@ -123,7 +123,7 @@ A list useful Atom packages to install. You may find them in Atom typing `ctrl+,
 
 ### Highly Recommended
 
--   [Chlorine](https://github.com/mauricioszabo/atom-chlorine)
+-   [Chlorine](https://github.com/mauricioszabo/atom-lazuli)
 -   [Lisp Paredit](https://github.com/neil-lindquist/lisp-paredit)
 -   [Parinfer](https://github.com/oakmac/atom-parinfer) or [Parinfer Plus](https://github.com/mauricioszabo/atom-parinfer-plus)
 

@@ -1,9 +1,9 @@
 #!/bin/bash
 
-rm -Rf integration/chlorine-tests/lib
+rm -Rf integration/lazuli-tests/lib
 
 if [ "$1" == "node" ]; then
-    cd integration/chlorine-test && npm install && nohup npx shadow-cljs watch dev &
+    cd integration/lazuli-test && npm install && nohup npx shadow-cljs watch dev &
 else
     docker run -d \
         --rm \
@@ -13,5 +13,5 @@ else
         -u root \
         -v`pwd`:/work \
         atom \
-        sh -c 'cd /work/integration/chlorine-tests && npm install && npx shadow-cljs watch tests'
+        sh -c 'cd /work/integration/lazuli-tests && npm install && npx shadow-cljs watch tests'
 fi

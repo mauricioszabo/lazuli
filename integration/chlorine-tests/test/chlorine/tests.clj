@@ -1,4 +1,4 @@
-(ns chlorine.tests
+(ns lazuli.tests
   (:require [clojure.test :refer [deftest testing run-tests] :as test]
             [etaoin.api :as api]
             [etaoin.keys :as keys]
@@ -41,7 +41,7 @@
       (run-worspace-cmd! "core:close"))))
 
 (defn- connect! []
-  (run-worspace-cmd! "chlorine:connect-socket-repl")
+  (run-worspace-cmd! "lazuli:connect-socket-repl")
   (api/wait-visible @editor {:css "input[placeholder=port]"})
   (api/fill @editor {:css "input[placeholder=port]"} (keys/with-ctrl keys/backspace))
   (api/fill @editor {:css "input[placeholder=port]"} "3333")
@@ -75,8 +75,8 @@
 
 (defn- eval-file [file contents]
   (with-file file contents)
-  (run-editor-cmd! "chlorine:clear-console")
-  (run-editor-cmd! "chlorine:evaluate-top-block"))
+  (run-editor-cmd! "lazuli:clear-console")
+  (run-editor-cmd! "lazuli:evaluate-top-block"))
 
 (defn- inline-text []
   (api/wait-exists @editor {:css "atom-text-editor div.result-overlay"})
@@ -102,7 +102,7 @@
   (let [[_ elem] (api/query-all @editor "//a[contains(.,'...')]")]
     (api/click-el @editor elem)))
 
-(deftest chlorine-tests []
+(deftest lazuli-tests []
   (try
     (prepare-selenium!)
     (api/wait-exists @editor {:css "atom-text-editor"})
@@ -119,38 +119,38 @@
 
       (testing "go to definition of a var"
         (with-file "test.clj" "defn")
-        (run-editor-cmd! "chlorine:go-to-var-definition")
+        (run-editor-cmd! "lazuli:go-to-var-definition")
         (goto-file "core.clj")
         (check (editor-text) => #":arglists")
         (run-editor-cmd! "core:close"))
 
       (testing "shows definition of var"
         (with-file "test.clj" "defn")
-        (run-editor-cmd! "chlorine:source-for-var")
+        (run-editor-cmd! "lazuli:source-for-var")
         (wait-for #(re-find #"fdecl" (console-text)))
         (check (console-text) => #"fdecl"))
 
       (testing "breaks evaluation"
         (eval-file "test.clj" "(Thread/sleep 4000)")
         (wait-for #(do
-                     (run-editor-cmd! "chlorine:break-evaluation")
+                     (run-editor-cmd! "lazuli:break-evaluation")
                      (re-find #"interrupted" (console-text))))
         (check (inline-text) => #"Evaluation interrupted"))
 
       (testing "shows function doc"
         (eval-file "test.clj" "str")
-        (run-editor-cmd! "chlorine:doc-for-var")
+        (run-editor-cmd! "lazuli:doc-for-var")
         (check (inline-text) => #"With no args, returns the empty string. With one arg x, returns"))
 
       (testing "captures exceptions"
         (eval-file "test.clj" "(throw (ex-info \"Error Number 1\", {}))")
-        (run-editor-cmd! "chlorine:evaluate-top-block")
+        (run-editor-cmd! "lazuli:evaluate-top-block")
         (check (inline-text) => #"Error Number 1")
         (check (visible? "div.result-overlay.error") => {}))
 
       (testing "captures evaluated exceptions"
         (eval-file "test.clj" "(ex-info \"Error Number 2\", {})")
-        (run-editor-cmd! "chlorine:evaluate-top-block")
+        (run-editor-cmd! "lazuli:evaluate-top-block")
         (check (inline-text) => #"Error Number 2")
         (check (visible? "div.result-overlay.error") => nil))
 
@@ -163,12 +163,12 @@
         (wait-for #(re-find #"52" (console-text)))
         (check (console-text) => #"52 53 54")
         (goto-file "test.clj")
-        (run-editor-cmd! "chlorine:clear-inline-results"))
+        (run-editor-cmd! "lazuli:clear-inline-results"))
 
     ;;; CLOJURESCRIPT!
       (testing "ClojureScript"
         (testing "connecting"
-          (run-editor-cmd! "chlorine:connect-embedded")
+          (run-editor-cmd! "lazuli:connect-embedded")
           (check (has-text? "Connected to ClojureScript") => #"ClojureScript"))
 
         (testing "evaluates code"
@@ -177,26 +177,26 @@
 
         (testing "go to definition of a var"
           (with-file "test.cljs" "println")
-          (run-editor-cmd! "chlorine:go-to-var-definition")
+          (run-editor-cmd! "lazuli:go-to-var-definition")
           (goto-file "core.cljs")
           (check (editor-text) => #"Same as print")
           (run-editor-cmd! "core:close"))
 
         (testing "captures exceptions"
           (eval-file "test.cljs" "(throw (ex-info \"Error Number 1\", {}))")
-          (run-editor-cmd! "chlorine:evaluate-top-block")
+          (run-editor-cmd! "lazuli:evaluate-top-block")
           (check (inline-text) => #"Error Number 1")
           (check (visible? "div.result-overlay.error") => {}))
 
         (testing "captures non-error exceptions"
           (eval-file "test.cljs" "(throw \"ERROR\")")
-          (run-editor-cmd! "chlorine:evaluate-top-block")
+          (run-editor-cmd! "lazuli:evaluate-top-block")
           (check (inline-text) => #"ERROR")
           (check (visible? "div.result-overlay.error") => {}))
 
         (testing "captures evaluated exceptions"
           (eval-file "test.cljs" "(ex-info \"Error Number 2\", {})")
-          (run-editor-cmd! "chlorine:evaluate-top-block")
+          (run-editor-cmd! "lazuli:evaluate-top-block")
           (check (inline-text) => #"Error Number 2")
           (check (visible? "div.result-overlay.error") => nil))))
     (finally
@@ -210,4 +210,4 @@
     (System/exit (+ fail error))))
 
 #_
-(load-file "test/chlorine/tests.clj")
+(load-file "test/lazuli/tests.clj")

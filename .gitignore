@@ -12,3 +12,8 @@ lib/js
 lib/cmds.js*
 
 integration/fixture-app/target/
+.clj-kondo/
+.lsp/
+.tool-versions
+devtools/
+

@@ -48,13 +48,13 @@
 ## 0.10.3
 - Fixed issue detecting port from `.shadow-cljs/socket-repl.port` file on Windows
 - Added support for detecting port from `.nrepl-port` and `.socket-repl-port` files
-- Trying to fix issue https://github.com/mauricioszabo/atom-chlorine/issues/234
+- Trying to fix issue https://github.com/mauricioszabo/atom-lazuli/issues/234
 
 ## 0.10.2
 - Fixed issues with `prn` inside interactive renderer
 - Fixed issues with disconnect (sometimes it tries to run callbacks after disconnected)
 - Caching clj-kondo
-- Fixed an error parsing `shadow-cljs.edn` files (https://github.com/mauricioszabo/atom-chlorine/issues/226)
+- Fixed an error parsing `shadow-cljs.edn` files (https://github.com/mauricioszabo/atom-lazuli/issues/226)
 
 ## 0.10.1
 - Fixed nREPL code disconnecting when you send accents
@@ -67,7 +67,7 @@
 - Removed "activation commands" because for now, Chlorine will always be active even without a REPL connection
 
 ## 0.9.4
-- Fixed defining functions with same name as `clojure.core` (fixes https://github.com/mauricioszabo/atom-chlorine/issues/214).
+- Fixed defining functions with same name as `clojure.core` (fixes https://github.com/mauricioszabo/atom-lazuli/issues/214).
 - Fixed clojure REPL not connecting on first try
 - Interactive eval redirects STDOUT
 
@@ -103,14 +103,14 @@
 - For now, removed inspection of JS and resolving promises
 
 ## 0.7.5
-- Fixes on nREPL imports for Orchard, Compliment, etc (https://github.com/mauricioszabo/atom-chlorine/issues/191)
+- Fixes on nREPL imports for Orchard, Compliment, etc (https://github.com/mauricioszabo/atom-lazuli/issues/191)
 
 ## 0.7.4
 - Fixed refresh code not working
 
 ## 0.7.3
-- Forward-finding namespaces if a NS form was not found before the cursor (fixes https://github.com/mauricioszabo/atom-chlorine/issues/193)
-- Waiting for REPL results before forwarding new commands to the REPL (probably fixes https://github.com/mauricioszabo/atom-chlorine/issues/192)
+- Forward-finding namespaces if a NS form was not found before the cursor (fixes https://github.com/mauricioszabo/atom-lazuli/issues/193)
+- Waiting for REPL results before forwarding new commands to the REPL (probably fixes https://github.com/mauricioszabo/atom-lazuli/issues/192)
 - Autocomplete shows docstrings and arities when completing functions
 
 ## 0.7.2
@@ -127,7 +127,7 @@
 
 ### 0.6.2
 - Fixed core Clojerl exception
-- Fixed saving file when Clojure is disconnected and auto-refresh is turned on (Fixes https://github.com/mauricioszabo/atom-chlorine/issues/179)
+- Fixed saving file when Clojure is disconnected and auto-refresh is turned on (Fixes https://github.com/mauricioszabo/atom-lazuli/issues/179)
 - More commands comming from Orchard:
   - find-usages
   - clojure-doc-for-var
@@ -178,10 +178,10 @@
 - Redirecting `*test-out*` to the right output
 
 ### 0.4.11
-- Fixes "Attempting to call unbound fn: #'unrepl.core/write" (https://github.com/mauricioszabo/atom-chlorine/issues/158)
+- Fixes "Attempting to call unbound fn: #'unrepl.core/write" (https://github.com/mauricioszabo/atom-lazuli/issues/158)
 
 ### 0.4.10
-- Fixes https://github.com/mauricioszabo/atom-chlorine/issues/156
+- Fixes https://github.com/mauricioszabo/atom-lazuli/issues/156
 
 ### 0.4.9
 - Fix for CSS of Ink inline results, and some edge-cases that could throw exceptions
@@ -194,7 +194,7 @@
 
 ### 0.4.6
 - Changed the detection of blocks (will consider the parens the cursor is in as the "block")
-- Fixed https://github.com/mauricioszabo/atom-chlorine/issues/150
+- Fixed https://github.com/mauricioszabo/atom-lazuli/issues/150
 
 ### 0.4.5
 - Some fixes on the experimental features' renderer
@@ -217,7 +217,7 @@
 - Fixed a bug on Autocomplete (when disconnecting the REPL and adding/removing Compliment, the autocomplete would still try to use/not use Compliment after connecting to REPL)
 
 ### 0.4.2
-- Fixed https://github.com/mauricioszabo/atom-chlorine/issues/139
+- Fixed https://github.com/mauricioszabo/atom-lazuli/issues/139
 
 ### 0.4.1
 - Fixed test results and output not appearing on console
@@ -230,7 +230,7 @@
 - Goto var definition now works on ClojureScript
 
 ### 0.3.9
-- Fixed autocomplete error on dynamic vars (https://github.com/mauricioszabo/atom-chlorine/issues/132)
+- Fixed autocomplete error on dynamic vars (https://github.com/mauricioszabo/atom-lazuli/issues/132)
 - Support for Clojerl
 - Treating special windows chars on REPL output
 
@@ -240,10 +240,10 @@
 
 ### 0.3.7
 - Fixed "get current var" when cursor is at the end of the variable
-- Fixed warning messages connection to Shadow-CLJS when reagent is not present (https://github.com/mauricioszabo/atom-chlorine/issues/127)
+- Fixed warning messages connection to Shadow-CLJS when reagent is not present (https://github.com/mauricioszabo/atom-lazuli/issues/127)
 
 ### 0.3.6
-- Added specs on doc-for-var (https://github.com/mauricioszabo/atom-chlorine/issues/100)
+- Added specs on doc-for-var (https://github.com/mauricioszabo/atom-lazuli/issues/100)
 - Fixed an issue with goto var definition where sometimes it wasn't able to find the var
 
 ### 0.3.5
@@ -283,7 +283,7 @@
 - Support for more ClojureScript REPLs that open a socket REPL
 
 ### 0.2.2
-- Fixes problems when evaluating code that can't be compiled (https://github.com/mauricioszabo/atom-chlorine/issues/109)
+- Fixes problems when evaluating code that can't be compiled (https://github.com/mauricioszabo/atom-lazuli/issues/109)
 - Fixes autocomplete crashing the editor
 
 ### 0.2.1
@@ -304,19 +304,19 @@
 - Exceptions are now rendered on the console
 
 ## 0.1.12
-- Fixed InkConsole not opening (https://github.com/mauricioszabo/atom-chlorine/issues/93)
+- Fixed InkConsole not opening (https://github.com/mauricioszabo/atom-lazuli/issues/93)
 - Better evaluate-block and evaluate-top-block without using Atom API (still behind the experimental features)
 
 ### Experimental features on this version
 - Commands "evaluate-selection", "evaluate-top-block" and "evaluate-block" without using Atom's APIs. They also are aware of reader symbols, so now `evaluate-block` over `'(+ 1 2 3)` will return a list, not run the function.
 
 ## 0.1.11
-- Fixed some error with autocomplete in CLJS (https://github.com/mauricioszabo/atom-chlorine/issues/85)
+- Fixed some error with autocomplete in CLJS (https://github.com/mauricioszabo/atom-lazuli/issues/85)
 - Added experimental features with a config to control
-- Disabled editing on Console tab (https://github.com/mauricioszabo/atom-chlorine/issues/79)
+- Disabled editing on Console tab (https://github.com/mauricioszabo/atom-lazuli/issues/79)
 - Changed defaults for auto-reload projects
 - Rendering correctly the ratio (like `1/2`)
-- Fixed load-file on non-saved or non-editor tabs (https://github.com/mauricioszabo/atom-chlorine/issues/75)
+- Fixed load-file on non-saved or non-editor tabs (https://github.com/mauricioszabo/atom-lazuli/issues/75)
 
 ### Experimental features on this version
 - To be able to support multiple NS on the same files and also to remove internal Atom's
@@ -336,7 +336,7 @@ not "evaluate-block" because of other issues). These two new ways of evaluating 
 - Takes up less space on status bar
 
 ## 0.1.7
-- Fixes Chlorine not activating on MacOSX (https://github.com/mauricioszabo/atom-chlorine/issues/67)
+- Fixes Chlorine not activating on MacOSX (https://github.com/mauricioszabo/atom-lazuli/issues/67)
 
 ## 0.1.5
 - Fixes compilation problems
@@ -347,12 +347,12 @@ not "evaluate-block" because of other issues). These two new ways of evaluating 
 ## 0.1.3
 - Break on Clojure (https://github.com/mauricioszabo/repl-tooling/issues/6)
 - Fixed "burst commands" (https://github.com/mauricioszabo/repl-tooling/issues/24)
-- Fix Lumo's console error (https://github.com/mauricioszabo/atom-chlorine/issues/60)
+- Fix Lumo's console error (https://github.com/mauricioszabo/atom-lazuli/issues/60)
 
 ## 0.1.2
 - Auto-adding port number if the project file is a shadow-cljs build project
 - Config to open console on bottom
-- Fixed console errors (https://github.com/mauricioszabo/atom-chlorine/issues/33) and (https://github.com/mauricioszabo/atom-chlorine/issues/32)
+- Fixed console errors (https://github.com/mauricioszabo/atom-lazuli/issues/33) and (https://github.com/mauricioszabo/atom-lazuli/issues/32)
 
 ## 0.1.1
 - Fix `#js` tagged literal
@@ -367,10 +367,10 @@ not "evaluate-block" because of other issues). These two new ways of evaluating 
 - New renderer for errors
 - Fixed error when trying to expand tagged literals
 - De-emphasis on Java's stacktrace lines
-- Fixes stacktrace not appearing on big exceptions (https://github.com/mauricioszabo/atom-chlorine/issues/50)
-- Fixes REBL integration (https://github.com/mauricioszabo/atom-chlorine/pull/51)
-- Focus on fields when connecting to Socket REPL (https://github.com/mauricioszabo/atom-chlorine/pull/47)
-- Install dependencies (https://github.com/mauricioszabo/atom-chlorine/pull/45)
+- Fixes stacktrace not appearing on big exceptions (https://github.com/mauricioszabo/atom-lazuli/issues/50)
+- Fixes REBL integration (https://github.com/mauricioszabo/atom-lazuli/pull/51)
+- Focus on fields when connecting to Socket REPL (https://github.com/mauricioszabo/atom-lazuli/pull/47)
+- Install dependencies (https://github.com/mauricioszabo/atom-lazuli/pull/45)
 
 ## 0.0.10
 * Update of UNREPL broke objects that implements `nav` (all objects, really). Temporary fix so things keep working until it's solved for once.
@@ -390,17 +390,17 @@ not "evaluate-block" because of other issues). These two new ways of evaluating 
 * Allows to load file with windows on WSL
 
 ## 0.0.7
-* Fixes autocomplete error: https://github.com/mauricioszabo/atom-chlorine/issues/26
+* Fixes autocomplete error: https://github.com/mauricioszabo/atom-lazuli/issues/26
 * Fixes backpressure error: https://github.com/mauricioszabo/repl-tooling/issues/7
 * When we close the REPL console, we now disconnect from Socket REPLs
 
 ## 0.0.6
-* Fix https://github.com/mauricioszabo/atom-chlorine/issues/22
+* Fix https://github.com/mauricioszabo/atom-lazuli/issues/22
 
 ## 0.0.5
 * Goto definition for Clojure files outside JAR
 * Fix wrong file and line number when evaluating
-* Add commands `chlorine:load-file` to load full file in REPL, `chlorine:source-for-var` to show source (by @seancorfield)
+* Add commands `lazuli:load-file` to load full file in REPL, `lazuli:source-for-var` to show source (by @seancorfield)
 * Add commands to run tests (by @seancorfield)
 * Fixed auto-complete on Clojure when NS form is undetermined (by @seancorfield)
 

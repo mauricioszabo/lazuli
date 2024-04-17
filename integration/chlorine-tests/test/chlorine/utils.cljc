@@ -1,4 +1,4 @@
-(ns chlorine.utils
+(ns lazuli.utils
   (:require [promesa.core :as p]
             [clojure.test :as t]))
 

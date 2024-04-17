@@ -1,126 +1,151 @@
-![Chlorine](docs/chlorine-logo.png)
+# Lazuli
 
-[![CircleCI](https://circleci.com/gh/mauricioszabo/atom-chlorine.svg?style=svg)](https://circleci.com/gh/mauricioszabo/atom-chlorine)
+Interactive development with Ruby for the [Pulsar](https://pulsar-edit.dev/) editor!
 
-Cl + Atom = Chlorine
+Lazuli is a port (kind of!) of
+[Chlorine](https://gitlab.com/clj-editors/atom-chlorine), for the Clojure
+language. It aims to bring the features of Chlorine to the Ruby language -
+basically, semantic autocomplete and go to var definition using runtime
+information (that is, a code that _is running_) instead of relying on static
+analysis that might miss most cases, like dynamic definition of methods using
+`has_many`, `belongs_to`, or even by defining routes in Rails
 
-Socket-REPL integration with Clojure and ClojureScript with Atom.
+## Features
 
-This project also have a [FAQ](https://github.com/mauricioszabo/repl-tooling/blob/master/doc/FAQ.md) now
-
-## Example
-Chlorine connects to a Socket REPL and adds autocomplete, goto var definition, evaluation, refresh, and documentation of functions on Atom. It can also add additional things, so check it out on [extending Chlorine](docs/extending.md). The idea of the project is to give Atom a felling of being completely connected to running code that's being developed, like SmallTalk images but still working with textual source codes, git, and every other tool that we already use with our code.
+Lazuli connects to [nrepl-lazuli](https://gitlab.com/clj-editors/nrepl-lazuli)
+and uses runtime info to evaluate code inside the editor. It also adds some
+semantic information like where some method was defined, trying to avoid going
+to the first definition (which usually is just a Gem or other library) and
+matching the actual user's code (as it's possible to see in the example below,
+where Go To Var Definition goes to `has_many` and to the actual `routes.rb`). It
+also adds semantic autocomplete, meaning that it uses runtime info to actually
+_run code_ to complete stuff (that might be dangerous if one of the code is
+trying to remove a file, for example, so use it with caution).
 
 ![Evaluating code](docs/eval-code.gif)
 
-As it is possible to see above, Chlorine works both with Clojure and ClojureScript (only shadow-cljs for now).
+### Tracing
+
+Lazuli traces your code to check where a method was called, and then keeps a
+binding of it. You can check these traces in the "Trace" section of the "Lazuli
+REPL" tab, and filter by typing parts of a filename (like `controller` for
+example). The traces are shown in the order they were executed - so if you
+visted a "Users List" page in Rails, it'll probably have a trace like
+`users_controller.rb` > `user.rb` > `index.html.erb`.
+
+Traces also automatically generate "Watch Points" for you
+
+### Watch Points
+
+Watch points can be added manually (more on that on future versions, for now
+it's a little buggy) or automatically by Lazuli. One way they are generated
+automatically are by tracing the code, which Lazuli does by default (it'll be
+configurable in the future, it might be a performance hit in some edge cases) or
+by running the command "Load File and Inspect" which will instrument the current
+file and, as soon as you hit that code, it'll make the watch point for you.
+
+Watch points are basically "saved context" (or, to use Ruby's correct terms,
+`binding`s) so that you can evaluate code _inside an instance or method_. This
+also adds semantic autocomplete and goto var definition (it does that by running
+your code and checking results, trying to comple the last portion of your call.
+So, for example, `my.object.cal` <- if you put the cursor at the end of this
+word, Lazuli will evaluate `my.object`, get the result of it and call `.methods`
+on it to check which methods are available for autocomplete).
+
+Watch points are not bullet-proof - Lazuli will try to use the _closest watch
+point_ it finds related to the current row/column the current editor is pointing
+to. For example, suppose we have the code:
+
+```ruby
+def something(a, b)
+  "#{a.upcase} - #{b.downcase}"
+end
+
+def other_thing(a, b)
+  a / b
+end
+```
+
+If we have a watch point in the _first method_ - that is, `something` - and we
+try to evaluate something inside the _second method_ - the `other_thing` - it
+will happily use the first method's watch point and we will have an unreliable
+result - that is, `a` and `b` being strings instead of numbers. To fix this,
+just run some code that touches `other_thing`.
+
+### Breakpoints
+
+Not fully correct yet, but in the future it might be possible to add
+"breakpoints" - that is, a code that stops all evaluation but allows Lazuli to
+keep running that specific line, making changes, up to the point we can
+"release" the breakpoint inside the editor. Might be a **huge advantage** on
+fixing bugs that are caused for things that need more context, for example
+database transactions.
 
 ## Usage:
 
->If you are new to Clojure or Atom, you may check this [quickstart guide](docs/quickstart.md).
-
-Fire up a clojure REPL with Socket REPL support. With `shadow-cljs`, when you `watch` some build ID it'll give you a port for nREPL and Socket REPL. With `lein`, invoke it in a folder where you have `project.clj` and you can use `JVM_OPTS` environment variable like (on Linux or MacOS):
-
-```bash
-JVM_OPTS='-Dclojure.server.myrepl={:port,5555,:accept,clojure.core.server/repl}' lein repl
-```
-
-On Windows, you can add a profile on `project.clj` that will add these JVM options; to do it, check if your `project.clj` have the `:profiles` key. If it does, just add the `:socket` part, if it does not, add the `:profiles` tag and then the `:socket`:
-
-```clojure
-  ; ... dependencies, main, etc ...
-  :profiles {:socket {:jvm-opts ["-Dclojure.server.myrepl={:port,5555,:accept,clojure.core.server/repl}"]}}
-```
-
-Then, you can run `lein with-profile +socket repl`, and it'll open a Socket REPL on port `5555`.
-
-On Shadow-CLJS' newer versions, when you start a build with `shadow-cljs watch <some-id>`, it doesn't shows the Socket REPL port on the console, but it does create a file with the port number on `.shadow-cljs/socket-repl.port`. You can read that file to see the port number (Chlorine currently uses this file to mark the port as default).
-
-With `clj`, you can run the following from any folder:
-
-```bash
-clj -J'-Dclojure.server.repl={:port,5555,:accept,clojure.core.server/repl}'
-```
-
-Or have it in `:aliases` in `deps.edn`. (For an example with port 50505 see https://github.com/seancorfield/dot-clojure/blob/master/deps.edn, then you can run `clj -A:socket`.)
-
-Then, you connect Chlorine with the port using the command _Connect Clojure Socket REPL_. This package works with lumo too, but you'll need to run _Connect ClojureScript Socket REPL_.
-
-When connected, it'll try to load `compliment` and `org.clojure/tools.namespace` (for autocomplete and refresh). Then you can evaluate code on it, and it'll render on a block decoration below the line.
+Install [nrepl-lazuli](https://gitlab.com/clj-editors/nrepl-lazuli) and
+configure your app to run the nREPL server (more info on the nREPL Lazuli repo).
+Connect the editor to that REPL, and interact with the code you want to
+evaluate, to generate traces and watch points. Then, have fun!
 
 ## Keybindings:
-This package does not register any keybindings to avoid keybinding conflict issues. You can define whatever you want via keymap.cson. The following have worked for some people:
+
+This package does not register any keybindings (for now, at
+#least) to avoid keybinding conflict issues. You can define whatever you want
+#via keymap.cson. The following have worked for some people:
 
 **If you use vim-mode-plus:**
-```cson
-'atom-text-editor.vim-mode-plus.normal-mode[data-grammar="source clojure"]':
-  'g f':          'chlorine:go-to-var-definition'
-  'ctrl-d':       'chlorine:doc-for-var'
-  'space c':      'chlorine:connect-socket-repl'
-  'space l':      'chlorine:clear-console'
-  'shift-enter':  'chlorine:evaluate-block'
-  'ctrl-enter':   'chlorine:evaluate-top-block'
-  'ctrl-c':       'chlorine:break-evaluation'
-  'space space':  'chlorine:clear-inline-results'
-  'space x':      'chlorine:run-tests-in-ns'
-  'space t':      'chlorine:run-test-for-var'
 
-'atom-text-editor.vim-mode-plus.insert-mode[data-grammar="source clojure"]':
-  'shift-enter': 'chlorine:evaluate-block'
-  'ctrl-enter': 'chlorine:evaluate-top-block'
+```cson
+'atom-text-editor.vim-mode-plus.normal-mode':
+  'g f':          'lazuli:go-to-var-definition'
+  'space l':      'lazuli:clear-console'
+  'shift-enter':  'lazuli:evaluate-line'
+  'ctrl-enter':   'lazuli:evaluate-top-block'
+  'ctrl-c':       'lazuli:break-evaluation'
+  'space space':  'lazuli:clear-inline-results'
+
+'atom-text-editor.vim-mode-plus.insert-mode':
+  'shift-enter': 'lazuli:evaluate-line'
+  'ctrl-enter': 'lazuli:evaluate-top-block'
 ```
 
 **If you don't use vim bindings:**
+
 ```cson
-'atom-text-editor[data-grammar="source clojure"]':
-  'ctrl-; y':       'chlorine:connect-socket-repl'
-  'ctrl-; e':       'chlorine:disconnect'
-  'ctrl-; k':       'chlorine:clear-console'
-  'ctrl-; f':       'chlorine:load-file'
-  'ctrl-; b':       'chlorine:evaluate-block'
-  'ctrl-; B':       'chlorine:evaluate-top-block'
-  'ctrl-; i':       'chlorine:inspect-block'
-  'ctrl-; I':       'chlorine:inspect-top-block'
-  'ctrl-; s':       'chlorine:evaluate-selection'
-  'ctrl-; c':       'chlorine:break-evaluation'
-  'ctrl-; S':       'chlorine:source-for-var'
-  'ctrl-; d':       'chlorine:doc-for-var'
-  'ctrl-; x':       'chlorine:run-tests-in-ns'
-  'ctrl-; t':       'chlorine:run-test-for-var'
-```
-## How to work with ClojureScript
-For now, it only works with Shadow-CLJS or ClojureScript implementations like Lumo or Plank that exposes a ClojureScript socket REPL.
-
-With Lumo, you fire up lumo with `lumo -n 3322` to start a socket REPL on port `3322` (or any other port), then connect Chlorine with "Connect ClojureScript Socket REPL".
-
-With Shadow-CLJS, after watching (or after starting a server, or anything that starts a socket REPL) you need to run the compiled javascript file in the output directory (configured in shadow-cljs.edn) - either with `node <...>` (if it's a node script) or by opening the browser in a page that includes the script (if you're targetting browser), connect with "Connect Socket REPL" (Chlorine will auto-detect the port - you don't need to change it), and run the command "Connect Embedded". Then you can run code on `.cljs` files too. For ClojureScript its also recommended to enable "experimental features" (on Chlorine settings) for better experience.
-
-> ### WARNING
-> Do not evaluate the `ns` form in Shadow-CLJS. Shadow keeps your namespaces reloaded all the time, and sometimes re-evaluating then can lead to strange issues. If you **do evaluate** the ns form and get errors, just save the current file and Shadow will hot-reload it, and things will be fine. For more info, see: https://github.com/mauricioszabo/atom-chlorine/issues/213
-
-### Detection
-Chlorine will try to detect the current file extension, falling back to `.clj` if the file is not saved. With ClojureScript, it'll only evaluate `.cljs` files, and it'll use the Clojure REPL to evaluate `.clj` and `.cljc` files. You can override this behavior in the package's configuration to one of the following:
-
-* Prefer CLJ - The default configuration, will use the Clojure REPL to evaluate `.clj` and `.cljc` and it'll use the ClojureScript REPL to evaluate `.cljs`
-* Prefer CLJS - It will use the Clojure REPL to evaluate `.clj` and the ClojureScript REPL to evaluate `.cljc` and `.cljs`
-* CLJ - It'll use the Clojure REPL to evaluate all files
-* CLJS - It'll use the ClojureScripte REPL to evaluate all files
-
-## Contributors
-
-### How to contribute?
-As Chlorine is in active development, it was starting to become tedious to publish a newer version of repl-tooling for every experiment, so for now, the library is registered as a submodule. To contribute, you clone this repository and run:
-
-```
-./scripts/setup
+'atom-text-editor':
+  'ctrl-; y':       'lazuli:connect-socket-repl'
+  'ctrl-; e':       'lazuli:disconnect'
+  'ctrl-; k':       'lazuli:clear-console'
+  'ctrl-; b':       'lazuli:evaluate-line'
+  'ctrl-; B':       'lazuli:evaluate-top-block'
+  'ctrl-; s':       'lazuli:evaluate-selection'
+  'ctrl-; c':       'lazuli:break-evaluation'
 ```
 
-To register the submodule. More info on [Developing](docs/developing.md) document.
+Other command you might want to add is `lazuli:go-to-var-definition`.
+
+## Future
+
+There might be a way to peek definitions, show documentation of functions, run
+tests and other features. One thing I want to add is the ability to run tests
+and capture watch expressions, keeping the interpreter open so it might be
+possible, and maybe even easy, do debug failures and automatically fix them
+inside the editor.
+
+Interpretation of Ruby results in on radar - basically, when an exception
+happens, show stacktraces inside the editor, or when it doesn't happen, have a
+"pretty-printable" version of the result - maybe even with some introspection
+features like "if the result is a class, get the methods of it to show what the
+class supports"
 
 ### Code Contributors
 
-This project exists thanks to all the people who contribute. [[Contribute](docs/developing.md)].
+This project, and others exist thanks to all the people who contribute. [[Contribute](docs/developing.md)].
 <a href="https://github.com/mauricioszabo/atom-chlorine/graphs/contributors"><img src="https://opencollective.com/atom-chlorine/contributors.svg?width=890&button=false" /></a>
+
+Please notice that the contributions mention Chlorine. Both Lazuli and Chlorine
+share more than 80% of the code, so contributing to one will contribute to both.
 
 ### Financial Contributors
 
