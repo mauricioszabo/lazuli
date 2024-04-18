@@ -392,7 +392,9 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                               ".singleton_class"
                               ".class"))
           identifier (str (:identifier dissected)
-                          (when (:assign dissected) "="))
+                          (when (and (-> dissected :type (= "call"))
+                                     (:assign dissected))
+                            "="))
           code (case (:type dissected)
                  "call" (str callee-class ".__lazuli_source_location(:" identifier ")")
                  "identifier" (str callee-class ".__lazuli_source_location(:" identifier ")")
