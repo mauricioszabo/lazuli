@@ -12,10 +12,9 @@
                   :title "Position of console when connecting REPL"
                   :enum ["right" "down"]
                   :default "right"}
-    :eval-mode {:description "Should we evaluate Clojure or ClojureScript?"
-                :type :string
-                :enum [:prefer-clj :prefer-cljs :clj :cljs]
-                :default :prefer-clj}}))
+    :number-of-traces {:title "Number of max traces Lazuli will keep."
+                       :type :number
+                       :default 2000}}))
 
 (defn- open-config! []
   (let [config (path/join (. js/atom getConfigDirPath) "lazuli" "config.cljs")]

@@ -514,7 +514,9 @@ created. If you only send the `:id`, the watch element for that ID will be remov
 
 (defn- get-config []
   (let [config (.. js/atom -config (get "lazuli"))]
-    {:eval-mode (-> config (aget "eval-mode") keyword)
+    {:max-traces (-> config (aget "number-of-traces"))
+     ;; Compatibility with Duck-REPLed
+     :eval-mode :clj
      :console-pos (-> config (aget "console-pos") keyword)}))
 
 (defn- summarize-path [path]
@@ -544,20 +546,23 @@ created. If you only send the `:id`, the watch element for that ID will be remov
   (let [traces (:repl/tracings @state)
         console ((:get-console (:editor/callbacks @state)))
         query (.. console (querySelector "input.search-trace") -value)
-        reg (re-pattern query)
-        filtered (->> traces
-                      (filter #(re-find reg (:file %)))
-                      (take-last 20))]
+        query2 (.. console (querySelector "input.search-trace-not") -value)
+        reg (try (re-pattern query) (catch :default _ #""))
+        reg2 (try (some-> (not-empty query2) re-pattern) (catch :default _ #""))
+        filtered (filter #(re-find reg (:file %)) traces)
+        removed (cond->> filtered reg2 (remove #(re-find reg2 (:file %))))
+        traces (take-last 20 removed)]
     (set! (.. console (querySelector "div.traces") -innerText) "")
-    (doseq [{:keys [file row]} filtered]
+    (doseq [{:keys [file row]} traces]
       (append-trace! console file row))))
 
 (defn- on-out [state key output]
   (when (= "hit_auto_watch" key)
     (let [{:keys [file line]} output
+          {:keys [max-traces]} ((-> @state :editor/callbacks :get-config))
           old-timeout (:repl/tracings-timeout @state)]
       (swap! state update :repl/tracings #(cond-> (conj % {:file file :row line})
-                                            (-> % count (> 2000)) (subvec 1)))
+                                            (-> % count (> max-traces)) (subvec 1)))
       (js/clearTimeout old-timeout)
       (swap! state assoc :repl/tracings-timeout (js/setTimeout #(update-traces! state)))))
 
@@ -758,11 +763,13 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                (fn [c]
                  (set! (.. c (querySelector ".details") -innerHTML)
                    (str "<div class='title'>Trace</div>"
-                        "<div><input class='search-trace input-text'></div>"
+                        "<div class='cols'><input class='search-trace input-text' placeholder='Only'> "
+                        "<input class='search-trace-not input-text' placeholder='Exclude'></div>"
                         "<div class='traces'></div>"
                         "<div class='title'>Watch Points</div><div class='watches'></div>"
                         "<div class='title'>Breakpoint</div><div class='breakpoint'></div>"))
                  (set! (.. c (querySelector "input.search-trace") -onchange) #(update-traces! repl-state))
+                 (set! (.. c (querySelector "input.search-trace-not") -onchange) #(update-traces! repl-state))
                  (tango-console/clear c)
                  (reset! console c)))
        (swap! connections assoc id repl-state)))))
