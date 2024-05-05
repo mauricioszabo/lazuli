@@ -93,8 +93,9 @@
    (if (:no-wrap opts)
      {:id id
       :result (try
-                ; (rp/parse-ruby-res value)
-                (edn/read-string {:default tagged-literal} value)
+                (if (:plain opts)
+                  (edn/read-string {:default tagged-literal} value)
+                  (rp/parse-ruby-string value))
                 (catch :default _ value #_(rp/->RubyVariable value)))}
      (let [decoded (-> value serializer/deserialize :result)]
        (assoc decoded :id id)))))
