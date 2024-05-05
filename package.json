@@ -1,7 +1,7 @@
 {
   "name": "lazuli",
   "main": "./lib/main",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Interactive nREPL client for Ruby",
   "keywords": [
     "ruby",
