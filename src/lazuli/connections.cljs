@@ -18,6 +18,7 @@
             [lazuli.code-treatment :as treat]
             [lazuli.ui.interface :as interface]
             [com.wsscode.pathom3.connect.operation :as connect]
+            [tango.ui.elements :as ui]
             ["path" :as path]
             ["fs" :as fs]))
 
@@ -491,8 +492,8 @@ created. If you only send the `:id`, the watch element for that ID will be remov
       (.. div -classList (remove "pending"))
       (let [parse (-> @connection :editor/features :result-for-renderer)
             hiccup (parse result connection)]
-        (set! (.-parsed div) hiccup)
-        (rdom/render hiccup div)))))
+        (set! (.-innerHTML div) "")
+        (.appendChild div (ui/dom hiccup))))))
 
 (defn- open-ro-editor [file-name line col position contents]
   (.. js/atom
