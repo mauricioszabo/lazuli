@@ -3,176 +3,181 @@
             [tango.ui.edn :as edn]
             [lazuli.ruby-parsing :as rp]
             [reagent.core :as r]
+            [tango.integration.repl-helpers :as helpers]
             [orbit.serializer :as serializer]))
 
-(defn- leaf [state]
-  [ui/Rows (pr-str (rp/to-clj @(:result state)))])
-
 (declare as-html)
-(defn- vector-ish [prefix state]
-  (let [results (:elements @(:result state))
-        children-states (map-indexed (fn [i _]
-                                       [(r/cursor (:result state) [:elements i])
-                                        (edn/create-child-state state i)])
-                                     results)
-        children (->> children-states
-                      (map (fn [[cursor child-state]]
-                             [as-html
-                              (edn/update-state state
-                                                cursor
-                                                {:root? true}
-                                                child-state)])))]
-    [ui/Rows  prefix "[....]" (into [ui/Children] children)]))
 
-(defn- hashmap [state]
-  (let [results (:keyvals @(:result state))
-        children-states (map-indexed (fn [i _]
-                                       [(r/cursor (:result state) [:keyvals i 0])
-                                        (r/cursor (:result state) [:keyvals i 1])
-                                        (edn/create-child-state state i 0)
-                                        (edn/create-child-state state i 1)])
-                                     results)
-        children (->> children-states
-                      (map (fn [[kc vc ks vs]]
-                             [ui/Cols
-                              (ui/WithClass
-                               ["map-key" "opened"]
-                               [as-html
-                                (edn/update-state state
-                                                  kc
-                                                  {:root? true}
-                                                  ks)])
-                              " => "
-                              [as-html
-                               (edn/update-state state
-                                                 vc
-                                                 {:root? true}
-                                                 vs)]])))]
-    [ui/Rows "{...}" (into [ui/Children] children)]))
+(defn- OpenClose [open? parent-elem-delay open-elem-delay closed-elem-delay]
+  (let [is-open? (atom open?)]
+    [ui/Link {:icon ["chevron" (if open? "opened" "closed")]
+              :on-click (fn [set-icon]
+                          (when closed-elem-delay (.remove @closed-elem-delay))
+                          (.remove @open-elem-delay)
+                          (if @is-open?
+                            (do
+                              (when closed-elem-delay (.appendChild @parent-elem-delay @closed-elem-delay))
+                              (set-icon "chevron closed"))
+                            (do
+                              (.appendChild @parent-elem-delay @open-elem-delay)
+                              (set-icon "chevron opened")))
+                          (swap! is-open? not))}]))
 
-(defn- object [state]
-  (let [result @(:result state)
-        results (:elements result)
-        children-states (map-indexed (fn [i _]
-                                       [(r/cursor (:result state) [:elements i 0])
-                                        (r/cursor (:result state) [:elements i 1])
-                                        (edn/create-child-state state i 0)
-                                        (edn/create-child-state state i 1)])
-                                     results)
-        children (->> children-states
-                      (map (fn [[kc vc ks vs]]
-                             [ui/Cols
-                              (ui/WithClass
-                               ["map-key" "opened"]
-                               [as-html
-                                (edn/update-state state
-                                                  kc
-                                                  {:root? true}
-                                                  ks)])
-                              "="
-                              [as-html
-                               (edn/update-state state
-                                                 vc
-                                                 {:root? true}
-                                                 vs)]])))]
-    [ui/Rows "#<" (:name result) ">" (into [ui/Children] children)]))
+(defn- String [contents state]
+  (let [closed-txt (if (-> contents count (> 100))
+                     (str (subs (pr-str contents) 0 100) "...")
+                     (pr-str contents))
+        closed (delay (ui/dom [ui/Rows closed-txt]))
+        opened (delay (ui/dom [ui/Cols [ui/Icon "quote"] " " [ui/WithClass ["italic"]
+                                                              [ui/Text contents]]]))
+        is-open? (atom false)
+        col (atom nil)]
+    (reset! col (ui/dom [ui/Cols
+                         (when (:root? state) [OpenClose false col opened closed])
+                         @closed]))))
+
+(defn- root-vector [elements state]
+  ["["
+   (->> elements
+        (take 50)
+        (map #(as-html % (assoc state :root? false)))
+        (interpose ", ")
+        (into [:<>]))
+   (if (-> elements count (> 100))
+     ", ...]"
+     "]")])
+
+(defn- Vector [{:keys [elements]} state]
+  (let [parent (root-vector elements state)
+        child (->> elements
+                   (map #(as-html % state))
+                   (into [ui/Children])
+                   ui/dom
+                   delay)
+        root-elem (atom nil)]
+    (reset! root-elem
+            (ui/dom
+             [ui/Rows
+              (into
+               [ui/Cols (when (:root? state) [OpenClose false root-elem child nil])]
+               parent)]))))
+
+(defn- keyval-parent [keyvals state separator]
+  (->> keyvals
+       (take 50)
+       (map (fn [[k v]]
+              [:<>
+               (as-html k (assoc state :root? false))
+               separator
+               (as-html v (assoc state :root? false))]))
+       (interpose ", ")
+       (into [:<>])))
+
+(defn- keyval-child [keyvals state]
+  (->> keyvals
+       (map (fn [[k v]]
+              [:<>
+               [ui/WithClass ["map-key" "opened"] (as-html k state)]
+               (as-html v state)]))
+       (interpose ui/Space)
+       (into [ui/Children])
+       ui/dom
+       delay))
+
+(defn- Map [keyvals state]
+  (let [parent (keyval-parent keyvals state " => ")
+        child (keyval-child keyvals state)
+        root-elem (atom nil)]
+
+    (doto
+     (reset! root-elem
+             (ui/dom
+              [ui/Rows
+               [ui/Cols
+                (when (:root? state) [OpenClose false root-elem child nil])
+                "{" parent "}"]]))
+     (prn :W?))))
+
+(defn Object [obj-name elements state]
+  (let [inner-is-ruby? (implements? rp/Ruby elements)
+        parent (if inner-is-ruby?
+                 [as-html elements (assoc state :root? false)]
+                 (keyval-parent elements state "="))
+        child (if inner-is-ruby?
+                (delay (ui/dom [ui/Children [as-html elements state]]))
+                (keyval-child elements state))
+        root-elem (atom nil)]
+    (reset! root-elem
+            (ui/dom
+             [ui/Rows
+              [ui/Cols
+               (when (:root? state) [OpenClose false root-elem child nil])
+               "#<" obj-name " " parent ">"]]))))
 
 (defprotocol UI
   (as-ui [this state]))
 
 (extend-protocol UI
-  rp/RubyInstanceVar (as-ui [_ state] (leaf state))
-  rp/RubyNumber (as-ui [_ state] (leaf state))
-  rp/RubyKeyword (as-ui [_ state] (leaf state))
-  rp/RubyString (as-ui [_ state] (leaf state))
-  rp/RubyVariable (as-ui [_ state] (leaf state))
+  rp/RubyInstanceVar (as-ui [self _] [ui/Cols (:name self)])
+  rp/RubyNumber (as-ui [self _] [ui/Cols (-> self :num str)])
+  rp/RubyKeyword (as-ui [self _] [ui/Cols (:name self)])
+  rp/RubyString (as-ui [self state] [String (:contents self) state])
+  rp/RubyVariable (as-ui [self _] [ui/Cols (:name self)])
+  ;
+  ; rp/RubySet (as-ui [_ state] (vector-ish "Set" state))
+  rp/RubyVector (as-ui [self state] [Vector self state])
 
-  rp/RubySet (as-ui [_ state] (vector-ish "Set" state))
-  rp/RubyVector (as-ui [_ state] (vector-ish "" state))
-
-  rp/RubyMap (as-ui [_ state] (hashmap state))
-  rp/RubyObject (as-ui [_ state] (object state))
+  rp/RubyMap (as-ui [self state] [Map (:keyvals self) state])
+  rp/RubyObject (as-ui [self state] [Object (:name self) (:elements self) state])
+  rp/RubyUnknownVal (as-ui [self state] [ui/Cols (:value self)])
 
   serializer/RawData
-  (as-ui [self state] [ui/Text (pr-str (:data self))])
+  (as-ui [self state] [ui/Cols (pr-str (:data self))])
 
   number
-  (as-ui [self state] [ui/Text (pr-str self)])
+  (as-ui [self state] [ui/Cols (pr-str self)])
 
   boolean
-  (as-ui [self state] [ui/Text (pr-str self)])
+  (as-ui [self state] [ui/Cols (pr-str self)])
 
   string
-  (as-ui [self state] [ui/Text (pr-str self)])
+  (as-ui [self state] [String self state])
 
   nil
-  (as-ui [self state] [ui/Text "nil"])
+  (as-ui [self state] [ui/Cols "nil"])
 
   object
   (as-ui [self state] [ui/Text (pr-str self)]))
 
-  ; :default
-  ; (as-ui [self state] [ui/Rows (pr-str self)]))
 
+(defn WrappedError [result state]
+  [ui/WithClass ["error"] [as-html (first result) state]])
 
-; (extend-type object
-;   UI
-;   (as-ui [self state] [ui/Rows (pr-str self)]))
-;
-; (as-ui "foo" {})
-#_
-(as-ui "foo" {})
-(type 'foo)
+(defn- as-html [result state]
+  (let [metadata (meta result)]
+    (cond
+      (:tango/wrapped-error metadata) [WrappedError result state]
+      :else (as-ui result state))))
 
-(defn- as-html [state]
-  (let [result (-> state :eval-result)
-        result (if (contains? @result :result)
-                 (r/cursor result [:result])
-                 result)
-        new-state (assoc state :result result)
-        metadata (meta @result)]
-    (if (:tango/wrapped-error metadata)
-      (edn/wrapped-error new-state)
-      (as-ui @result new-state))))
-
-(set! edn/as-html as-html)
-
-    ; (when-let [id (:orbit.patch/id metadata)]
-    ;   (swap! (:patches state) assoc id result))
-    ; (cond
-    ;   (:orbit.ui.reflect/info metadata) (reflect new-state)
-    ;   (:orbit.ui/lazy metadata) (lazy new-state)
-    ;   (:orbit.shadow/error metadata) (shadow-errors new-state)
-    ;   (:tango/interactive metadata) (int/interactive new-state)
-    ;   (:tango/wrapped-error metadata) (wrapped-error new-state)
-    ;   (:tango/generic-stacktrace metadata) (generic-stacktrace new-state)
-    ;   (instance? serializer/RawData @result) (raw-data new-state)
-    ;   (serializer/tagged-literal-with-meta? @result) (tagged new-state)
-    ;   (map? @result) (as-map new-state)
-    ;   (vector? @result) (as-vector new-state)
-    ;   (set? @result) (as-set new-state)
-    ;   (coll? @result) (as-list new-state)
-    ;   :else (leaf new-state))))
-
-;; FIXME - make Tango allow for this cus
-#_
 (defn for-result [result editor-state]
-  (r/with-let [local-state (r/atom {})
-               patches (atom {})
-               result (if (:error result)
-                        (assoc result :result ^:tango/wrapped-error [(:error result)])
-                        result)
-               result-a (r/atom result)
-               new-eql (helpers/prepare-new-eql editor-state)
-               new-editor-state (atom (update @editor-state :editor/features assoc
-                                             :eql new-eql
-                                             :original-eql (-> @editor-state
-                                                               :editor/features
-                                                               :eql)))]
+  (let [local-state (atom {})
+        patches (atom {})
+        result (if (:error result)
+                 (assoc result :result ^:tango/wrapped-error [(:error result)])
+                 result)
+        result-a (atom result)
+        new-eql (helpers/prepare-new-eql editor-state)
+        new-editor-state (atom (update @editor-state :editor/features assoc
+                                      :eql new-eql
+                                      :original-eql (-> @editor-state
+                                                        :editor/features
+                                                        :eql)))]
     ^{:patches patches}
-    [as-html {:eval-result result-a
-              :editor-state new-editor-state
-              :patches patches
-              :state local-state
-              :root? true}]))
-; (elements/Rows)
+    [as-html (:result result)
+     {:eval-result result-a
+      :editor-state new-editor-state
+      :patches patches
+      :state local-state
+      :root? true}]))
+
+(set! edn/for-result for-result)
