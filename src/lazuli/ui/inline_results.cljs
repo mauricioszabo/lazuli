@@ -1,7 +1,8 @@
 (ns lazuli.ui.inline-results
   (:require [reagent.dom :as rdom]
             [promesa.core :as p]
-            ["atom" :refer [TextEditor]]))
+            ["atom" :refer [TextEditor]]
+            [tango.ui.elements :as ui]))
 
 (defonce ^:private results (atom {}))
 
@@ -48,17 +49,8 @@
       (let [parse (-> @connection-state :editor/features :result-for-renderer)
             hiccup (parse data connection-state)]
         (swap! results assoc-in [id :parsed] hiccup)
-        (rdom/render hiccup div)))))
-
-; (s/defn update-result [result :- schemas/EvalResult]
-;   (let [id (:id result)
-;         {:keys [editor range]} (:editor-data result)]
-;     (when-let [{:keys [div]} (get @results id)]
-;       (let [parse (-> @state :tooling-state deref :editor/features :result-for-renderer)
-;             parsed (parse result)]
-;         (.. div -classList (add "result" (when (-> parsed meta :error) "error")))
-;         (swap! results update id assoc :parsed parsed)
-;         (rdom/render [render/view-for-result parsed] div)))))
+        (set! (.-innerHTML div) "")
+        (.appendChild div (ui/dom hiccup))))))
 
 (defn all-parsed-results []
   (for [[_ {:keys [parsed]}] @results
