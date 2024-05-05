@@ -6,6 +6,15 @@
 }
 
 .lazuli.result, .console.tango  {
+  div.italic {
+    font-style: italic;
+  }
+
+  div.traces {
+    max-height: 10em;
+    overflow: auto;
+  }
+
   display: flex;
   white-space: pre;
   user-select: auto;
@@ -18,6 +27,10 @@
     font-family: var(--editor-font-family);
     color: @text-color-subtle;
     background: rgba(0, 0, 0, 0.3);
+  }
+
+  div.italic {
+    font-style: italic;
   }
 
   div.cell {
