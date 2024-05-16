@@ -39,7 +39,7 @@
             (addOpener (fn [uri]
                          (when (= uri "atom://lazuli-terminal")
                            (aset div "innerHTML" "")
-                           (.appendChild div (console/view))
+                           (.appendChild div (console/view "lazuli"))
                            console)))))
   (.add subs (.. js/atom -views (addViewProvider Console (constantly div)))))
 
