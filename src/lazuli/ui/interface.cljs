@@ -89,14 +89,12 @@
         child (keyval-child keyvals state)
         root-elem (atom nil)]
 
-    (doto
-     (reset! root-elem
-             (ui/dom
-              [ui/Rows
-               [ui/Cols
-                (when (:root? state) [OpenClose false root-elem child nil])
-                "{" parent "}"]]))
-     (prn :W?))))
+    (reset! root-elem
+            (ui/dom
+             [ui/Rows
+              [ui/Cols
+               (when (:root? state) [OpenClose false root-elem child nil])
+               "{" parent "}"]]))))
 
 (defn Object [obj-name elements state]
   (let [inner-is-ruby? (implements? rp/Ruby elements)
