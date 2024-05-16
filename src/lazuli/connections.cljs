@@ -17,6 +17,7 @@
             [lazuli.providers-consumers.symbols :as symbols]
             [lazuli.code-treatment :as treat]
             [lazuli.ui.interface :as interface]
+            [lazuli.ruby-parsing :as rp]
             [com.wsscode.pathom3.connect.operation :as connect]
             [tango.ui.elements :as ui]
             ["path" :as path]
@@ -334,12 +335,11 @@ created. If you only send the `:id`, the watch element for that ID will be remov
           on-eval (-> @state :editor/callbacks :on-eval)]
     (on-start-eval editor-info)
     (p/let [res (eval/evaluate evaluator
+                               line
                                (cond-> {:id id
-                                        :code line
-                                        :file (-> editor-info :editor/filename)
-                                        :line (-> editor-info :text/range ffirst)}
-                                 watch-id (assoc :watch_id watch-id))
-                               {:options {:op "eval"}})
+                                        :filename (-> editor-info :editor/filename)
+                                        :row (-> editor-info :text/range ffirst)}
+                                 watch-id (assoc :watch_id watch-id)))
             res (merge res editor-info)
             final-result (if (contains? res :result)
                            res
@@ -368,12 +368,11 @@ created. If you only send the `:id`, the watch element for that ID will be remov
           on-eval (-> @state :editor/callbacks :on-eval)]
     (on-start-eval editor-info)
     (p/let [res (eval/evaluate evaluator
-                               (cond-> {:code selection
-                                        :id id
-                                        :file (-> editor-info :editor/filename)
-                                        :line (-> editor-info :text/range ffirst)}
-                                 watch-id (assoc :watch_id watch-id))
-                               {:options {:op "eval"}})
+                               selection
+                               (cond-> {:id id
+                                        :filename (-> editor-info :editor/filename)
+                                        :row (-> editor-info :text/range ffirst)}
+                                 watch-id (assoc :watch_id watch-id)))
             res (merge res editor-info)
             final-result (if (contains? res :result)
                            res
@@ -586,26 +585,6 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                                                   :watch/id method
                                                   :watches [(:id output)]}))))
 
-; (declare on-stdout)
-#_
-(defn- stacktraced-stdout [console ^js div out]
-  (if-let [[match before file row] (re-find #"(.+?)([^\s:]+):(\d+)" out)]
-    (let [span (js/document.createElement "span")
-          a (js/document.createElement "a")]
-      (set! (.-innerText span) before)
-      (set! (.-innerText a) (str file ":" row))
-      (set! (.-onclick a) (fn [^js evt]
-                            (.preventDefault evt)
-                            (open-editor {:file-name file
-                                          :line (dec (js/parseInt row))})))
-      (tango-console/append @console
-                            (doto div
-                                  (.appendChild span)
-                                  (.appendChild a))
-                            ["icon-quote"])
-      (on-stdout console (subs out (count match))))
-    (.appendChild div (doto (js/document.createElement "span") (.append out)))))
-
 (defn- big-stdout-thing [console out]
   (let [div (js/document.createElement "div")
         span (tango-console/create-content-span @console (str (subs out 0 80)
@@ -673,15 +652,6 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                                 (->> out keys first to-remove)
                                 (to-remove out)))))))))
 
-(defrecord AdaptedREPL [evaluator]
-  eval/REPL
-  (-evaluate [this code options]
-    (prn :OPTS options)
-    (eval/-evaluate evaluator code (assoc options :no-wrap true)))
-  (-break [this kind] (eval/-break evaluator kind))
-  (-close [this] (eval/-close evaluator))
-  (-is-closed [this] (eval/-is-closed evaluator)))
-
 (defn- adapted-repl [editor-state {:repl/keys [repl/evaluator]}]
   (p/let [{:keys [editor/callbacks]} @editor-state
           config-dir (:config/directory @editor-state)
@@ -692,10 +662,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                          not)]
      {:repl/evaluator (if is-config?
                         (-> @editor-state :editor/features :interpreter/evaluator)
-                        (->AdaptedREPL evaluator))}))
-                        ; (:repl/evaluator @editor-state))}))
-                        ; (-> @editor-state :editor/features :interpreter/evaluator)
-                        ; (->AdaptedREPL (:repl/evaluator @editor-state)))}))
+                        (:repl/evaluator @editor-state))}))
 
 (defn- resolvers-from-state [editor-state]
   (p/let [{:keys [editor/callbacks]} @editor-state
@@ -712,7 +679,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
      :config/project-paths (vec (:project-paths config))
      :repl/evaluator (if is-config?
                        (-> @editor-state :editor/features :interpreter/evaluator)
-                       (->AdaptedREPL (:repl/evaluator @editor-state)))
+                       (:repl/evaluator @editor-state))
      :config/repl-kind (-> @editor-state :repl/info :kind)}))
 
 (defn- update-resolvers! [state]
@@ -723,6 +690,12 @@ created. If you only send the `:id`, the watch element for that ID will be remov
         compose-resolver (-> @state :editor/features :pathom/compose-resolver)]
     (add-pathom-resolvers [treat/top-blocks treat/line treat/completions])
     (compose-resolver {:inputs [] :outputs [:repl/evaluator]} #(adapted-repl state %))))
+
+(defn- serialize [code]
+  code)
+
+(defn- deserialize [string]
+  {:result (rp/parse-ruby-string string)})
 
 (defn connect-nrepl!
   ([]
@@ -753,7 +726,8 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                       :prompt (partial prn :PROMPT)
                       :get-config #(get-config)
                       :editor-data #(get-editor-data)
-                      :config-directory (path/join (. js/atom getConfigDirPath) "lazuli")}
+                      :config-directory (path/join (. js/atom getConfigDirPath) "lazuli")
+                      :repl-options {:serdes {:serialize serialize :deserialize deserialize}}}
            repl-state (conn/connect! host port callbacks)]
      (when repl-state
        (swap! repl-state assoc-in [:editor/features :display-watches] #(display-watches repl-state %))

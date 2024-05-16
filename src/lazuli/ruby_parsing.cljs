@@ -149,7 +149,14 @@
     [(->RubyObject capture inners) next-chunk]))
 
 (defn parse-ruby-string
-  ([a-str] (first (parse-ruby-string a-str false)))
+  ([a-str]
+   (try
+     (let [[parsed rest] (parse-ruby-string a-str false)]
+       (if (seq rest)
+         (symbol a-str)
+         parsed))
+     (catch :default _
+       (symbol a-str))))
   ([a-str accept-more?]
    (let [first-char (first a-str)
          rst (delay (subs a-str 1))]
