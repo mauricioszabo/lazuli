@@ -59,7 +59,9 @@
         assign (fn [element ^js val]
                  (if (#{"operator_assignment" "assignment"} (.-type val))
                    (let [[l a] (.-children val)]
-                     (assoc element :assign (str (.-text l) " " (.-text a))))
+                     (assoc element
+                            :assign/expression (str (.-text l) " " (.-text a))
+                            :assign/left-side (.-text l)))
                    element))
         params (fn [params]
                  (when-let [params (some-> params .-text)]

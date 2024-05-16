@@ -328,7 +328,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                                                    [[row final-col] [row final-col]])
           line (cond->> (str (:identifier dissected) (:params dissected))
                  (:sep dissected) (str (:callee dissected) (:sep dissected))
-                 (:assign dissected) (str (:assign dissected) " "))
+                 (:assign/expression dissected) (str (:assign/expression dissected) " "))
           watch-id (treat/watch-id-for-code state current-text row)
           on-start-eval (-> @state :editor/callbacks :on-start-eval)
           on-eval (-> @state :editor/callbacks :on-eval)]
@@ -392,9 +392,12 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                             (if (-> dissected :callee-type #{"scope_resolution" "constant"})
                               ".singleton_class"
                               ".class"))
+          assign-is-the-expression? (delay (= (:assign/left-side dissected)
+                                              (str (:callee dissected)
+                                                   (:sep dissected)
+                                                   (:identifier dissected))))
           identifier (str (:identifier dissected)
-                          (when (and (-> dissected :type (= "call"))
-                                     (:assign dissected))
+                          (when (-> dissected :type (= "call") (and @assign-is-the-expression?))
                             "="))
           code (case (:type dissected)
                  "call" (str callee-class ".__lazuli_source_location(:" identifier ")")
