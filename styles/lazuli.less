@@ -5,7 +5,16 @@
   overflow: auto;
 }
 
-.lazuli.result, .console.tango  {
+.lazuli.result, .lazuli.console {
+  div.italic {
+    font-style: italic;
+  }
+
+  div.traces {
+    max-height: 10em;
+    overflow: auto;
+  }
+
   display: flex;
   white-space: pre;
   user-select: auto;
@@ -18,6 +27,10 @@
     font-family: var(--editor-font-family);
     color: @text-color-subtle;
     background: rgba(0, 0, 0, 0.3);
+  }
+
+  div.italic {
+    font-style: italic;
   }
 
   div.cell {
@@ -125,6 +138,30 @@
     background: @syntax-selection-color;
     padding: 0.2em;
   }
+
+  .full-content {
+    padding-top: 1em;
+    padding-bottom: 0.5em;
+    overflow: scroll;
+    display: block;
+    width: 100%;
+    height: 100%;
+
+    .content-part {
+      padding: 0em;
+      overflow: visible;
+      display: block;
+      width: auto;
+      height: auto;
+
+      overflow-anchor: none;
+    }
+
+    .scroll-anchor {
+      overflow-anchor: auto;
+      height: 0.5em;
+    }
+  }
 }
 
 .tango.icon-container {
@@ -187,15 +224,6 @@ div.tango.console {
   color: @syntax-text-color;
   font-family: var(--editor-font-family);
   font-size: var(--editor-font-size);
-
-  div.content-part {
-    padding-top: 1em;
-    overflow: scroll;
-    display: block;
-    width: 100%;
-    height: 100%;
-    padding-bottom: 1em;
-  }
 
   div.details {
     border-bottom: 2px solid;

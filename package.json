@@ -1,7 +1,7 @@
 {
   "name": "lazuli",
   "main": "./lib/main",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Interactive nREPL client for Ruby",
   "keywords": [
     "ruby",
@@ -19,22 +19,12 @@
       "versions": {
         "5.0.0": "autocomplete_provider"
       }
-    },
-    "symbol.provider": {
-      "versions": {
-        "1.0.0": "symbol_provider"
-      }
     }
   },
   "consumedServices": {
     "lsp.command": {
       "versions": {
         "0.1.0": "lsp_consumer"
-      }
-    },
-    "status-bar": {
-      "versions": {
-        "^1.0.0": "status_bar_consumer"
       }
     }
   },
