@@ -4,6 +4,7 @@
             [promesa.core :as p]
             [saphire.code-treatment :as treat]
             [orbit.evaluation :as eval]
+            [saphire.complete :as complete]
             ["atom" :refer [Range]]))
 
 (defonce state (atom nil))
@@ -38,36 +39,10 @@
      :replacementPrefix (get-prefix editor suggestion)}))
 
 (defn suggestions [{:keys [editor activatedManually]}]
-  (p/let [dissected (treat/dissect-editor-contents @state)
-          watch-id (treat/watch-id-for-code @state)
-          res (treat/eql @state [:repl/evaluator
-                                 {:editor/contents [:editor/filename :text/range]}])
-          evaluator (:repl/evaluator res)
-          editor-info (:editor/contents res)
-          method-code (str "binding.local_variables.map { |m| ['local_var', m.to_s] } + "
-                           "__self__.public_methods.map { |m| ['pub_method', m.to_s] } + "
-                           "__self__.private_methods.map { |m| ['priv_method', m.to_s] } + "
-                           "__self__.protected_methods.map { |m| ['prot_method', m.to_s] }")
-          code (case (:type dissected)
-                 "constant" "::Object.constants.map { |i| ['constant', i.to_s] }"
-                 "instance_variable" "instance_variables.map { |i| ['instance_var', i.to_s] }"
-                 "class_variable" "class_variables.map { |i| ['class_var', i.to_s] }"
-                 "identifier" (str/replace method-code #"__self__\." "")
-                 "scope_resolution" (str (:callee dissected) ".constants.map { |i| ['constant', i.to_s] }")
-                 "call" (if (-> dissected :sep (= "::"))
-                          (str (:callee dissected) ".constants.map { |i| ['constant', i.to_s] }")
-                          (str/replace method-code #"__self__" (:callee dissected))))]
-
-    (p/catch
-     (p/let [res (try (eval/evaluate evaluator
-                                     (cond-> {:code code
-                                              :file (-> editor-info :editor/filename)
-                                              :line (-> editor-info :text/range ffirst)}
-                                       watch-id (assoc :watch_id watch-id))
-                                     {:plain true :options {:op "eval"}})
-                   (catch :default _))]
-       (clj->js (map #(treat-result editor %) res)))
-     (constantly nil))))
+  (p/let [res (complete/suggestions @state)]
+    (->> res
+         (map #(treat-result editor %))
+         clj->js)))
 
 (defn- detailed-suggestion [suggestion])
 
