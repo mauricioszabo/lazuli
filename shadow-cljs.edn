@@ -2,6 +2,7 @@
                 ; "repl-tooling/src" "repl-tooling/test"
                 ; "repl-tooling/orbit/src" "repl-tooling/orbit/test"
                 "tango/src"
+                "saphire/src"
                 "sci.configs/src"
                 "repl-tooling/resources"]
 
