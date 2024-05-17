@@ -15,11 +15,12 @@
             [tango.commands-to-repl.pathom :as pathom]
             [lazuli.providers-consumers.autocomplete :as lazuli-complete]
             [lazuli.providers-consumers.symbols :as symbols]
-            [lazuli.code-treatment :as treat]
-            [lazuli.ui.interface :as interface]
+            [saphire.code-treatment :as treat]
+            [saphire.ui.interface :as interface]
             [lazuli.ruby-parsing :as rp]
             [com.wsscode.pathom3.connect.operation :as connect]
             [tango.ui.elements :as ui]
+            [saphire.connections :as s-connections]
             ["path" :as path]
             ["fs" :as fs]))
 
@@ -112,322 +113,6 @@
                                               (fn [] (command-function))))]
     (swap! commands conj disposable)))
 
-(def ^:private unused-cmds
-  #{:run-test-for-var :run-tests-in-ns
-    :load-file :evaluate-block :evaluate-selection
-    :go-to-var-definition})
-
-(defn- update-breakpoint! [state result hit?]
-  (prn :UPDATE-BREAKPOINT result)
-  (let [console ((:get-console (:editor/callbacks @state)))
-        file (:editor/filename result)
-        file-chars (count file)
-        row (-> result :text/selection :text/range ffirst)
-        file-text (if (< file-chars 35)
-                    file
-                    (str "..." (subs file (- file-chars 35))))
-        link-text (str " " file-text ":" (inc row))
-        link-elem (doto (js/document.createElement "a")
-                        (-> .-innerText (set!
-                                          (if hit?
-                                            link-text
-                                            (str link-text " (...waiting...)"))))
-                        (-> .-onclick (set! (fn [evt]
-                                              (.preventDefault evt)
-                                              (.. js/atom -workspace (open file
-                                                                           #js {:initialLine row
-                                                                                :searchAllPanes true}))))))
-        icon (doto (js/document.createElement "button")
-                   (.. -classList (add "btn" "icon" "icon-playback-play")))]
-
-    (swap! state assoc :repl/breakpoint
-           {:file (:editor/filename result), :row row})
-    (doto (. console querySelector ".breakpoint")
-          (-> .-innerText (set! ""))
-          (. appendChild icon)
-          (. appendChild link-elem))))
-
-(defn- update-watch!
-  "Updates a watch expression. It `watch` parameter contains:
-* `:id` - some ID that identifies the watch expression
-* `:text` - a text that will be displayed in the watch expression
-* `:callback` - a callback that will be called when we click the button. If `nil`, no button will
-  be displayed, and `icon` will be just a badge with the icon
-* `:icon` - an icon for the button
-* `:file` - the file being watched
-* `:row` - a 0-based row
-
-This code will ALWAYS update the watch with the same ID. If none is found, a new one will be
-created. If you only send the `:id`, the watch element for that ID will be removed"
-  [state {:keys [id text] :as watch}]
-  (let [console ((:get-console (:editor/callbacks @state)))
-        chars (count text)
-        text (if (< chars 55)
-               text
-               (str "..." (subs text (- chars 55))))
-        link-elem (delay
-                   (doto (js/document.createElement "a")
-                         (-> .-innerText (set! text))
-                         (.setAttribute "href" "#")
-                         (-> .-onclick (set! (fn [evt]
-                                               (.preventDefault evt)
-                                               (.. js/atom -workspace (open (:file watch)
-                                                                            #js {:initialLine (:row watch)
-                                                                                 :searchAllPanes true})))))))
-        icon (delay
-              (doto (js/document.createElement "button")
-                    (.. -classList (add "btn" "icon" (:icon watch)))
-                    (-> .-onclick (set! (:callback watch)))))
-        parent-elem (. console querySelector (str ".watches *[data-id=" id "]"))]
-
-    (if (-> watch keys (= [:id]))
-      (when parent-elem (set! (.-outerHTML parent-elem) ""))
-      (let [parent-elem (or parent-elem
-                            (doto (js/document.createElement "div")
-                                  (.setAttribute "data-id" id)))
-            watch-elem (. console querySelector ".watches")]
-        (set! (.-innerHTML parent-elem) "")
-        (cond
-          (:callback watch)
-          (. parent-elem appendChild @icon)
-
-          (:icon watch)
-          (.. @link-elem -classList (add "inline-block" "status-ignored" "icon" (:icon watch))))
-        (. parent-elem appendChild @link-elem)
-        (. watch-elem appendChild parent-elem)))))
-
-(defn- clear-old-breakpoint [state]
-  (when-let [old-breakpoint (:repl/breakpoint @state)]
-    (let [console ((:get-console (:editor/callbacks @state)))]
-      (eval/evaluate (:repl/evaluator @state)
-                     {}
-                     {:plain true
-                      :options {:op "eval_resume"}})
-      (set! (.. console (querySelector ".breakpoint") -innerHTML) ""))))
-
-(defn- wrap-node [parents ^js capture]
-  (let [node (.-node capture)
-        texts (map (fn [parent]
-                     (let [[kind name] (.-children parent)]
-                       (str (.-text kind) " " (.-text name))))
-                   parents)
-        [node-def [node-body possible-body]] (->> node
-                                                  .-children
-                                                  (split-with #(not (contains? #{"body_statement" "="} (.-type %)))))
-        def-text (->> node-def
-                      (map #(.-text ^js %))
-                      (str/join " "))
-        node-children (cond
-                        (nil? node-body) ["nil"]
-
-                        (= "body_statement" (.-type node-body))
-                        (->> node-body .-children (mapv #(.-text %)))
-
-                        :single-line-method
-                        [(.-text possible-body)])
-        parent-name (str/replace (str/join "::" texts) #"(class|module) " "")
-        method-name (str parent-name
-                         (if (-> capture .-name (= "method")) "#" ".")
-                         (->> node-def rest (filter #(-> % .-type (= "identifier"))) first .-text))
-        node-lines (cons (str "NREPL.watch!(binding, " (pr-str method-name) ")") node-children)
-        num-parents (count parents)
-        original-row (-> node .-startPosition .-row)]
-    {:row original-row
-     :adapted-row (- original-row num-parents)
-     :method method-name
-     :text (str (str/join "\n" texts)
-                "\n" def-text "\n" (str/join "\n" node-lines) "\nend\n"
-                (str/join "\n" (repeat num-parents "end")))}))
-
-(defn- get-all-watches [state]
-  (p/let [eql (-> @state :editor/features :eql)
-          data (p/-> (eql [:editor/data]) :editor/data)
-          ^js parsed (.parse treat/parser (:contents data))
-          captures-res (. treat/parent-query captures (.-rootNode parsed))
-
-          res
-          (->> captures-res
-               (reduce (fn [{:keys [parents texts] :as acc} ^js capture]
-                         (let [last-parent (some-> (not-empty parents) peek)
-                               start-index (.. capture -node -startIndex)
-                               parents (->> parents
-                                            (filter #(<= start-index (.-endIndex ^js %)))
-                                            vec)
-                               acc (assoc acc :parents parents)]
-                           (if (-> capture .-name (= "parent"))
-                             (update acc :parents conj (.-node capture))
-                             (update acc :texts conj (wrap-node parents capture)))))
-                       {:parents [] :texts []})
-               :texts)]
-    (.delete parsed)
-    res))
-
-(defn- to-id [old-id]
-  (-> old-id
-      (str/replace #"#" "_HASH_")
-      (str/replace #"/" "_SLASH_")
-      (str/replace #"\\" "_BSLASH_")
-      (str/replace #":" "_TWODOTS_")
-      (str/replace #"\." "_DOT_")))
-
-(defn- load-file-and-inspect [state]
-  (p/let [watches (get-all-watches state)
-          eql (-> @state :editor/features :eql)
-          res (eql [:editor/filename :repl/evaluator])
-          evaluator (:repl/evaluator res)
-          file (:editor/filename res)]
-    (doseq [{:keys [adapted-row row method text]} watches]
-      (p/do!
-       (when-let [watch (get-in @state [:repl/watch method])]
-         (swap! state update :repl/watch dissoc method)
-         (update-watch! state {:id (to-id method)})
-         (eval/evaluate evaluator
-                        {:watch_id (:watch/id watch)}
-                        {:plain true :options {:op "unwatch"}}))
-       (p/then (eval/evaluate evaluator
-                              {:code text :file file :line adapted-row}
-                              {:plain false :options {:op "eval"}})
-               (fn [res]
-                 (swap! state assoc-in [:repl/watch method] {:element/id (to-id method)
-                                                             :watch/id method
-                                                             :watches []})
-                 (update-watch! state {:id (to-id method)
-                                       :text method
-                                       :icon "icon-bookmark"
-                                       :file file
-                                       :row row})))))))
-
-(defn- load-file-cmd [state]
-  (p/let [watches (get-all-watches state)
-          eql (-> @state :editor/features :eql)
-          res (eql [:editor/filename :repl/evaluator :editor/contents])
-          evaluator (:repl/evaluator res)
-          file (:editor/filename res)]
-
-    (doseq [{:keys [method]} watches]
-      (p/then (eval/evaluate evaluator {:watch_id method} {:plain true :options {:op "unwatch"}})
-              #(update-watch! state {:id (to-id method)})))
-
-    (eval/evaluate evaluator (-> res :editor/contents :text/contents) {:filename file})))
-
-(defn- eval-line [state]
-  (p/let [eql (-> @state :editor/features :eql)
-          id (str (gensym "eval-"))
-          editor-info (eql [{:editor/contents [:editor/filename
-                                               :text/range
-                                               :editor/data
-                                               :repl/namespace]}])
-          editor-info (-> editor-info
-                          :editor/contents
-                          (dissoc :com.wsscode.pathom3.connect.runner/attribute-errors)
-                          (assoc :id id))
-          {:keys [editor/contents repl/evaluator]} (eql [:editor/contents :repl/evaluator])
-          current-text (:text/contents contents)
-          row (-> contents :text/range ffirst)
-          final-col (count (nth (str/split-lines current-text) row))
-          dissected (treat/dissect-editor-contents (:text/contents contents)
-                                                   [[row final-col] [row final-col]])
-          line (cond->> (str (:identifier dissected) (:params dissected))
-                 (:sep dissected) (str (:callee dissected) (:sep dissected))
-                 (:assign/expression dissected) (str (:assign/expression dissected) " "))
-          watch-id (treat/watch-id-for-code state current-text row)
-          on-start-eval (-> @state :editor/callbacks :on-start-eval)
-          on-eval (-> @state :editor/callbacks :on-eval)]
-    (on-start-eval editor-info)
-    (p/let [res (eval/evaluate evaluator
-                               line
-                               (cond-> {:id id
-                                        :filename (-> editor-info :editor/filename)
-                                        :row (-> editor-info :text/range ffirst)}
-                                 watch-id (assoc :watch_id watch-id)))
-            res (merge res editor-info)
-            final-result (if (contains? res :result)
-                           res
-                           (with-meta res {:tango/error true}))]
-      (on-eval final-result))))
-
-(defn- eval-selection [state]
-  (p/let [eql (-> @state :editor/features :eql)
-          id (str (gensym "eval-"))
-          editor-info (eql [{:editor/contents [:editor/filename
-                                               :text/range
-                                               :editor/data
-                                               :repl/namespace]}])
-          editor-info (-> editor-info
-                          :editor/contents
-                          (dissoc :com.wsscode.pathom3.connect.runner/attribute-errors)
-                          (assoc :id id))
-          {:keys [editor/contents repl/evaluator]} (eql [:repl/evaluator
-                                                         {:editor/contents [:text/contents
-                                                                            :text/range
-                                                                            :text/selection]}])
-          current-text (:text/contents contents)
-          selection (-> contents :text/selection :text/contents)
-          watch-id (treat/watch-id-for-code state current-text (-> contents :text/range ffirst))
-          on-start-eval (-> @state :editor/callbacks :on-start-eval)
-          on-eval (-> @state :editor/callbacks :on-eval)]
-    (on-start-eval editor-info)
-    (p/let [res (eval/evaluate evaluator
-                               selection
-                               (cond-> {:id id
-                                        :filename (-> editor-info :editor/filename)
-                                        :row (-> editor-info :text/range ffirst)}
-                                 watch-id (assoc :watch_id watch-id)))
-            res (merge res editor-info)
-            final-result (if (contains? res :result)
-                           res
-                           (with-meta res {:tango/error true}))]
-      (on-eval final-result))))
-
-(defn- goto-definition [state]
-  (p/let [dissected (treat/dissect-editor-contents state)
-          watch-id (treat/watch-id-for-code state)
-          evaluator (treat/eql state :repl/evaluator)
-          callee (:callee dissected "self")
-          editor-info (p/-> (treat/eql state [{:editor/contents [:editor/filename
-                                                                 :text/range]}])
-                            :editor/contents)
-          callee-class (str callee
-                            (if (-> dissected :callee-type #{"scope_resolution" "constant"})
-                              ".singleton_class"
-                              ".class"))
-          assign-is-the-expression? (delay (= (:assign/left-side dissected)
-                                              (str (:callee dissected)
-                                                   (:sep dissected)
-                                                   (:identifier dissected))))
-          identifier (str (:identifier dissected)
-                          (when (-> dissected :type (= "call") (and @assign-is-the-expression?))
-                            "="))
-          code (case (:type dissected)
-                 "call" (str callee-class ".__lazuli_source_location(:" identifier ")")
-                 "identifier" (str callee-class ".__lazuli_source_location(:" identifier ")")
-                 "constant" (str "Object.const_source_location(" (:identifier dissected) ".name)")
-                 "scope_resolution" (str callee ".const_source_location(" (pr-str (:identifier dissected)) ")")
-                 nil)]
-    (when code
-      (p/let [[file row] (eval/evaluate evaluator
-                                        (cond-> {:code code
-                                                 :file (-> editor-info :editor/filename)
-                                                 :line (-> editor-info :text/range ffirst)}
-                                          watch-id (assoc :watch_id watch-id))
-                                        {:plain true :options {:op "eval"}})]
-        (when (fs/existsSync file)
-          (.. js/atom -workspace (open file
-                                       #js {:initialLine (dec row)
-                                            :searchAllPanes true})))))))
-
-(defn- add-watch-cmd [state]
-  (p/let [{:text/keys [contents range]} (treat/eql state :editor/contents)
-          original-row (ffirst range)
-          {:keys [method row] :as a} (treat/method-name contents original-row)
-          ^js editor (.. js/atom -workspace getActiveTextEditor)
-          ^js buffer (.getBuffer editor)
-          ^js line (.lineForRow buffer original-row)
-          indent (re-find #"^\s+" line)]
-    (.setTextInRange buffer
-                     (clj->js [[original-row 0] [original-row ##Inf]])
-                     (str indent "NREPL.watch!(binding, '" method "')\n" line))))
-
 (defn- observe-editor! [state ^js editor]
   (when editor
     (when-let [display! (-> @state :editor/features :display-watches)]
@@ -438,38 +123,8 @@ created. If you only send the `:id`, the watch element for that ID will be remov
   (def state state)
   (remove-all-commands!)
   (swap! commands conj (.. js/atom -workspace (observeActiveTextEditor #(observe-editor! state %))))
-  (add-command! "clear-console" #(tango-console/clear @console))
-  (add-command! "evaluate-line" #(eval-line state))
-  (add-command! "evaluate-selection" #(eval-selection state))
-  (add-command! "load-file-and-inspect" #(load-file-and-inspect state))
-  (add-command! "load-file" #(load-file-cmd state))
-  (add-command! "go-to-var-definition" #(goto-definition state))
-  (add-command! "add-watch-command" #(add-watch-cmd state))
-
-  (doseq [[key {:keys [command]}] cmds
-          :when (not (unused-cmds key))]
+  (doseq [[key {:keys [command]}] cmds]
     (add-command! (name key) command)))
-
-(defn- diagnostic! [conn-id console output]
-  (let [connection (get @connections conn-id)
-        parse (-> @connection :editor/features :result-for-renderer)
-        append-error (fn [error]
-                       (let [div (doto (js/document.createElement "div")
-                                       (.. -classList (add "content")))
-                             hiccup (parse {:error error})]
-                         (rdom/render hiccup div)
-                         (tango-console/append console div ["icon-bug"])))]
-    (cond
-      (-> output meta :orbit.shadow/error)
-      (append-error output)
-
-      (:orbit.shadow/compile-info output)
-      (tango-console/update-build-status console (:orbit.shadow/compile-info output))
-
-      (:orbit.shadow/clients-changed output)
-      (tango-console/update-clients console
-                                    connection
-                                    (:orbit.shadow/clients-changed output)))))
 
 (defn- start-eval! [console result]
   (inline/create! result)
@@ -478,6 +133,7 @@ created. If you only send the `:id`, the watch element for that ID will be remov
     (set! (.-id div) (:id result))
     (.. div -classList (add "content" "pending"))
     (set! (.-innerHTML div) "<div class='tango icon-container'><span class='icon loading'></span></div>")
+    (prn :C console)
     (tango-console/append console div ["icon-code"])
     (js/setTimeout (fn []
                      (when (.. div -classList (contains "pending"))
@@ -522,180 +178,10 @@ created. If you only send the `:id`, the watch element for that ID will be remov
      :eval-mode :clj
      :console-pos (-> config (aget "console-pos") keyword)}))
 
-(defn- summarize-path [path]
-  (let [[_ relative] (.. js/atom -project (relativizePath path))
-        splitted (str/split relative path/sep)
-        [prefix [file]] (split-at (-> splitted count dec) splitted)]
-    (str (str/join path/sep (map #(subs % 0 1) prefix))
-         path/sep file)))
-
-(defn- append-trace! [console file row]
-  (let [traces (.querySelector console "div.traces")
-        crumbs (.-children traces)
-        txt (str (summarize-path file) ":" (inc row))
-        a (doto (js/document.createElement "a")
-                (-> .-innerText (set! txt))
-                (-> .-onclick (set! (fn [^js evt]
-                                      (.preventDefault evt)
-                                      (open-editor {:file-name file
-                                                    :line row})))))
-        span (js/document.createElement "span")]
-    (when (-> crumbs .-length (> 0))
-      (.append span " > "))
-    (.appendChild span a)
-    (.appendChild traces span)))
-
-(defn- update-traces! [state]
-  (let [traces (:repl/tracings @state)
-        console ((:get-console (:editor/callbacks @state)))
-        query (.. console (querySelector "input.search-trace") -value)
-        query2 (.. console (querySelector "input.search-trace-not") -value)
-        reg (try (re-pattern query) (catch :default _ #""))
-        reg2 (try (some-> (not-empty query2) re-pattern) (catch :default _ #""))
-        filtered (filter #(re-find reg (:file %)) traces)
-        removed (cond->> filtered reg2 (remove #(re-find reg2 (:file %))))
-        traces (take-last 20 removed)]
-    (set! (.. console (querySelector "div.traces") -innerText) "")
-    (doseq [{:keys [file row]} traces]
-      (append-trace! console file row))))
-
-(defn- on-out [state key output]
-  (when (= "hit_auto_watch" key)
-    (let [{:keys [file line]} output
-          {:keys [max-traces]} ((-> @state :editor/callbacks :get-config))
-          old-timeout (:repl/tracings-timeout @state)]
-      (swap! state update :repl/tracings #(cond-> (conj % {:file file :row line})
-                                            (-> % count (> max-traces)) (subvec 1)))
-      (js/clearTimeout old-timeout)
-      (swap! state assoc :repl/tracings-timeout (js/setTimeout #(update-traces! state)))))
-
-  (when (= "hit_watch" key)
-    (p/let [eql (-> @state :editor/features :eql)
-            contents (p/-> (eql {:file/filename (:file output)}
-                                [:file/contents])
-                           :file/contents
-                           :text/contents)
-            {:keys [method row]} (treat/method-name contents (- (:line output) 2))]
-      (update-watch! state {:id (to-id method)
-                            :text method
-                            :icon "icon-eye"
-                            :file (:file output)
-                            :row row})
-      (swap! state assoc-in [:repl/watch method] {:element/id (to-id method)
-                                                  :watch/id method
-                                                  :watches [(:id output)]}))))
-
-(defn- big-stdout-thing [console out]
-  (let [div (js/document.createElement "div")
-        span (tango-console/create-content-span @console (str (subs out 0 80)
-                                                              "\033[0m"))
-        a (js/document.createElement "a")]
-    (set! (.-innerText a) "...")
-    (set! (.-onclick a) (fn [^js evt]
-                          (.preventDefault evt)
-                          (set! (.-innerHTML div) "")
-                          (.. div -classList (add "content" "out"))
-                          (.appendChild div (tango-console/create-content-span @console out))))
-    (.appendChild div span)
-    (.appendChild div a)
-    div))
-
-(defn- on-stdout [console out]
-  ; (when (re-find #"AWS::Account Exists" out)
-  ;   (def o out))
-  ; (let [stacktraces (re-find #"(.+?)([^\s:]+):(\d+)" out)]
-    (cond
-      ; stacktraces
-      ; (stacktraced-stdout console (js/document.createElement "div") out)
-
-      (-> out count (< 100))
-      (tango-console/stdout @console out)
-
-      (re-find #"\s*\033" out)
-      (tango-console/append @console
-                            (big-stdout-thing console out)
-                            ["icon-quote"])
-
-      :normal
-      (def s (tango-console/stdout @console out))))
-
-(defn- display-watches [state file]
-  (p/let [evaluator (treat/eql state :repl/evaluator)
-          res (eval/evaluate evaluator
-                             {:file file}
-                             {:plain true :options {:op "watches_for_file"}})
-          rows (get res "rows")
-          con ((:get-console (:editor/callbacks @state)))]
-
-    #_(when (seq rows))
-    (set! (.. con (querySelector ".watches") -innerHTML) "")
-    (doseq [row rows
-            :let [txt (str file ":" (inc row))]]
-      (update-watch! state {:id (to-id txt)
-                            :text txt
-                            :icon "icon-eye"
-                            :file file
-                            :row row}))
-    rows))
-
-(defn- to-remove [flat-out]
-  (let [out-str (str flat-out)]
-    (or (re-find #"(:var|:repl/kind|:repl/cljs-env|:repl/namespace|:definition|:completions)" out-str)
-        (re-find #":text/(ns|current|.*block|.*namespace)" out-str))))
-
-(defn- remove-non-ruby-resolvers [resolvers]
-  (->> resolvers
-       (remove (fn [resolver]
-                 (->> resolver :config ::connect/output
-                      (some (fn [out]
-                              (if (map? out)
-                                (->> out keys first to-remove)
-                                (to-remove out)))))))))
-
-(defn- adapted-repl [editor-state {:repl/keys [repl/evaluator]}]
-  (p/let [{:keys [editor/callbacks]} @editor-state
-          config-dir (:config/directory @editor-state)
-          editor-data ((:editor-data callbacks))
-          is-config? (-> config-dir
-                         (path/relative (:filename editor-data))
-                         (str/starts-with? "..")
-                         not)]
-     {:repl/evaluator (if is-config?
-                        (-> @editor-state :editor/features :interpreter/evaluator)
-                        (:repl/evaluator @editor-state))}))
-
-(defn- resolvers-from-state [editor-state]
-  (p/let [{:keys [editor/callbacks]} @editor-state
-          config-dir (:config/directory @editor-state)
-          editor-data ((:editor-data callbacks))
-          config ((:get-config callbacks))
-          not-found :com.wsscode.pathom3.connect.operation/unknown-value
-          is-config? (-> config-dir
-                         (path/relative (:filename editor-data))
-                         (str/starts-with? "..")
-                         not)]
-    {:editor/data (or editor-data not-found)
-     :config/eval-as (if is-config? :clj (:eval-mode config))
-     :config/project-paths (vec (:project-paths config))
-     :repl/evaluator (if is-config?
-                       (-> @editor-state :editor/features :interpreter/evaluator)
-                       (:repl/evaluator @editor-state))
-     :config/repl-kind (-> @editor-state :repl/info :kind)}))
-
-(defn- update-resolvers! [state]
-  (swap! state update-in [:pathom :global-resolvers] remove-non-ruby-resolvers)
-  (let [add-pathom-resolvers (-> @state :editor/features :pathom/add-pathom-resolvers)
-        remove-resolver (-> @state :editor/features :pathom/remove-resolvers)
-        add-resolver (-> @state :editor/features :pathom/add-resolver)
-        compose-resolver (-> @state :editor/features :pathom/compose-resolver)]
-    (add-pathom-resolvers [treat/top-blocks treat/line treat/completions])
-    (compose-resolver {:inputs [] :outputs [:repl/evaluator]} #(adapted-repl state %))))
-
-(defn- serialize [code]
-  code)
-
-(defn- deserialize [string]
-  {:result (rp/parse-ruby-string string)})
+(defn- open-console! [repl-state]
+  (prn :WILL-OPEN)
+  (console/open-console (.. js/atom -config (get "lazuli.console-pos"))
+                        #((-> @repl-state :editor/commands :disconnect :command))))
 
 (defn connect-nrepl!
   ([]
@@ -708,17 +194,9 @@ created. If you only send the `:id`, the watch element for that ID will be remov
            console (atom nil)
            callbacks {:on-disconnect #(disconnect! id)
                       ;; FIXME - move everything that uses @console to a different callback?
-                      :on-stdout (fn on-out [%]
-                                   (on-stdout console %))
-                      :on-stderr #(tango-console/stderr @console %)
-                      :on-diagnostic #(diagnostic! id @console %)
                       :on-start-eval #(start-eval! @console %)
                       :on-eval #(did-eval! @console id %)
-                      :on-out #(on-out %1 %2 %3)
-                      ;; Use the new callback
-                      :register-commands #(register-commands! console %1 %2)
-                      ;; Below
-                      :get-console #(deref console)
+                      :register-commands register-commands!
                       :get-rendered-results #(concat (inline/all-parsed-results)
                                                      (tango-console/all-parsed-results @console))
                       :notify notify!
@@ -726,28 +204,10 @@ created. If you only send the `:id`, the watch element for that ID will be remov
                       :prompt (partial prn :PROMPT)
                       :get-config #(get-config)
                       :editor-data #(get-editor-data)
-                      :config-directory (path/join (. js/atom getConfigDirPath) "lazuli")
-                      :repl-options {:serdes {:serialize serialize :deserialize deserialize}}}
-           repl-state (conn/connect! host port callbacks)]
+                      :config-directory (path/join (. js/atom getConfigDirPath) "lazuli")}
+           repl-state (s-connections/connect-nrepl! host port callbacks open-console!)]
      (when repl-state
-       (swap! repl-state assoc-in [:editor/features :display-watches] #(display-watches repl-state %))
-       (swap! repl-state assoc :repl/tracings [])
+       (reset! console ((-> @repl-state :editor/callbacks :get-console)))
        (reset! lazuli-complete/state repl-state)
        (reset! symbols/find-symbol (-> @repl-state :editor/features :find-definition))
-       (update-resolvers! repl-state)
-
-       (p/then (console/open-console (.. js/atom -config (get "lazuli.console-pos"))
-                                     #((-> @repl-state :editor/commands :disconnect :command)))
-               (fn [c]
-                 (set! (.. c (querySelector ".details") -innerHTML)
-                   (str "<div class='title'>Trace</div>"
-                        "<div class='cols'><input class='search-trace input-text' placeholder='Only'> "
-                        "<input class='search-trace-not input-text' placeholder='Exclude'></div>"
-                        "<div class='traces'></div>"
-                        "<div class='title'>Watch Points</div><div class='watches'></div>"
-                        "<div class='title'>Breakpoint</div><div class='breakpoint'></div>"))
-                 (set! (.. c (querySelector "input.search-trace") -onchange) #(update-traces! repl-state))
-                 (set! (.. c (querySelector "input.search-trace-not") -onchange) #(update-traces! repl-state))
-                 (tango-console/clear c)
-                 (reset! console c)))
        (swap! connections assoc id repl-state)))))

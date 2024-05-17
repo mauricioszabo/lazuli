@@ -2,7 +2,7 @@
   (:require [clojure.walk :as walk]
             [clojure.string :as str]
             [promesa.core :as p]
-            [lazuli.code-treatment :as treat]
+            [saphire.code-treatment :as treat]
             [orbit.evaluation :as eval]
             ["atom" :refer [Range]]))
 
