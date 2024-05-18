@@ -179,7 +179,6 @@
      :console-pos (-> config (aget "console-pos") keyword)}))
 
 (defn- open-console! [repl-state]
-  (prn :WILL-OPEN)
   (console/open-console (.. js/atom -config (get "lazuli.console-pos"))
                         #((-> @repl-state :editor/commands :disconnect :command))))
 
