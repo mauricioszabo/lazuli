@@ -133,7 +133,6 @@
     (set! (.-id div) (:id result))
     (.. div -classList (add "content" "pending"))
     (set! (.-innerHTML div) "<div class='tango icon-container'><span class='icon loading'></span></div>")
-    (prn :C console)
     (tango-console/append console div ["icon-code"])
     (js/setTimeout (fn []
                      (when (.. div -classList (contains "pending"))
@@ -174,6 +173,7 @@
 (defn- get-config []
   (let [config (.. js/atom -config (get "lazuli"))]
     {:max-traces (-> config (aget "number-of-traces"))
+     :project-paths (into [] (.. js/atom -project getPaths))
      ;; Compatibility with Duck-REPLed
      :eval-mode :clj
      :console-pos (-> config (aget "console-pos") keyword)}))
@@ -204,7 +204,9 @@
                       :get-config #(get-config)
                       :editor-data #(get-editor-data)
                       :config-directory (path/join (. js/atom getConfigDirPath) "lazuli")}
-           repl-state (s-connections/connect-nrepl! host port callbacks open-console!)]
+           repl-state (s-connections/connect-nrepl! host port callbacks
+                                                    {:open-console open-console!
+                                                     :set-console? true})]
      (when repl-state
        (reset! console ((-> @repl-state :editor/callbacks :get-console)))
        (reset! lazuli-complete/state repl-state)
