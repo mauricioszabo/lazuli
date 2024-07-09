@@ -33,6 +33,7 @@
                     "instance_var" "mention status-renamed"
                     "class_var" "mention status-renamed"
                     "constant" "package status-renamed"
+                    "symbol" "info status-renamed"
                     "question")]
     {:text suggestion
      :iconHTML (str "<i class='icon-" icon-name "'></i>")
