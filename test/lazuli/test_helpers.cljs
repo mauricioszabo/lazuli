@@ -130,10 +130,27 @@
 (defn inline-results! [pulsar]
   (locate-all-text! pulsar ".lazuli.result"))
 
+(defn element-with! [pulsar selector text]
+  (p/loop [tries 0]
+    (p/let [texts (locate-all-text! pulsar selector)
+            match (some #{text} texts)]
+      (cond
+        match match
+        (<= tries 50) (p/do! (p/delay 20) (p/recur (inc tries)))
+        :exhausted-tries (p/rejected (ex-info (str "Didn't find a result with " text) {:results texts}))))))
+
+(defn result-with! [pulsar text]
+  (element-with! pulsar ".lazuli.result" text))
+
 (defn type-and-eval!
   ([pulsar text] (type-and-eval! pulsar text "Line"))
   ([pulsar text kind]
    (p/do!
     (type! pulsar text)
-    (me/changing [inline (inline-results! pulsar)]
-      (run-command! pulsar (str "Lazuli: Evaluate "))))))
+    (run-command! pulsar (str "Lazuli: Evaluate ")))))
+
+(defn type-and-eval-resulting!
+  ([pulsar text result] (type-and-eval-resulting! pulsar text "Line" result))
+  ([pulsar text kind result]
+   (p/let [inlines (type-and-eval! pulsar text kind)]
+     (result-with! pulsar result))))
