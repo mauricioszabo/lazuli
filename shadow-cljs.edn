@@ -1,4 +1,4 @@
-{:source-paths ["src"
+{:source-paths ["src" "test"
                 ; "repl-tooling/src" "repl-tooling/test"
                 ; "repl-tooling/orbit/src" "repl-tooling/orbit/test"
                 "tango/src"
@@ -47,5 +47,8 @@
 
         :output-dir "lib/js"
         :output-to "lib/cmds.js"
-        :devtools {:preloads []}}}};orbit.serializer-test
-                              ;flow-storm.api
+        :devtools {:preloads []}}
+
+  :tests {:target :node-script
+          :main lazuli.core-test/run-tests
+          :output-to "out/index.js"}}}
