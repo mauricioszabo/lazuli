@@ -26,14 +26,14 @@
 
 (defn- treat-result [editor [kind suggestion]]
   (let [icon-name (case kind
-                    "local_var" "chevron-right status-modified"
-                    "pub_method" "eye status-renamed"
-                    "priv_method" "stop status-removed"
-                    "prot_method" "lock status-modified"
+                    "local_var" "location status-modified"
+                    "pub_method" "organization status-renamed"
+                    "priv_method" "lock status-removed"
+                    "prot_method" "person status-modified"
                     "instance_var" "mention status-renamed"
                     "class_var" "mention status-renamed"
                     "constant" "package status-renamed"
-                    "symbol" "info status-renamed"
+                    "symbol" "tag-add status-renamed"
                     "question")]
     {:text suggestion
      :iconHTML (str "<i class='icon-" icon-name "'></i>")
