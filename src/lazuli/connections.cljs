@@ -119,10 +119,23 @@
       (when-let [path (not-empty (.getPath editor))]
         (display! path)))))
 
+(defn- stop-changing! [state ^js editor ^js changes]
+  (when-let [path (.getPath editor)]
+    (let [update! (-> @state :editor/features :update-watches)
+          render-watches! (-> @state :editor/features :render-watches)]
+      (doseq [^js change (.-changes changes)
+              :let [delta (- (.. change -newExtent -row) (.. change -oldExtent -row))]
+              :when (not= 0 delta)]
+        (update! path (.. change -oldStart -row) delta)))))
+
+(defn- observe-editors! [state, ^js editor]
+  (swap! commands conj (.onDidStopChanging editor #(stop-changing! state editor %))))
+
 (defn- register-commands! [console cmds state]
   (def state state)
   (remove-all-commands!)
   (swap! commands conj (.. js/atom -workspace (observeActiveTextEditor #(observe-editor! state %))))
+  (swap! commands conj (.. js/atom -workspace (observeTextEditors #(observe-editors! state %))))
   (doseq [[key {:keys [command]}] cmds]
     (add-command! (name key) command)))
 
