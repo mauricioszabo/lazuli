@@ -99,6 +99,7 @@
                         :tab "Tab"
                         :delete "Delete"
                         :home "Home"
+                        :end "End"
                         :insert "Insert"})
 
 (def ^:private tr-mods {:shift "Shift"

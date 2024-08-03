@@ -53,10 +53,20 @@
         (check notifications => (m/embeds [{:title "nREPL Connected"}])))
       (h/goto-line! pulsar 23)
 
-      (testing "calling a method creates a trace point"
-        (h/type-and-eval! pulsar "\nPerson.new('Andrew', 19).hello(:japan)")
-        (check (h/element-with! pulsar ".lazuli .traces span" " > /main.rb:9") => " > /main.rb:9"))
+      (let [watch-points (h/promise-to-change #(h/locate-all-text! pulsar ".lazuli .watches a"))]
+        (p/do!
+         (testing "calling a method creates a trace point"
+           (h/type-and-eval! pulsar "\nPerson.new('Andrew', 19).hello(:japan)")
+           (check (h/element-with! pulsar ".lazuli .traces span" " > /main.rb:9") => " > /main.rb:9"))
 
-      (testing "also creates a watch point"
-        (check (h/locate-all-text! pulsar ".lazuli .watches a")
-               => (m/embeds [#"main.rb:9"]))))))
+         (testing "also creates a watch point"
+           (check watch-points => (m/embeds [#"main.rb:4" #"main.rb:9"])))))
+
+      (let [watch-points (h/promise-to-change #(h/locate-all-text! pulsar ".lazuli .watches a"))]
+        (testing "changes watch point position when editor is changed"
+          (h/goto-line! pulsar 6)
+          (h/press! pulsar :end)
+          (h/type! pulsar "\n\n\n")
+          (check watch-points => (m/embeds [#"main.rb:4" #"main.rb:12"]))))
+
+      ,,,)))
