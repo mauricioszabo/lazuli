@@ -51,4 +51,5 @@
 
   :tests {:target :node-script
           :main lazuli.core-test/run-tests
-          :output-to "out/index.js"}}}
+          :compiler-options {:warnings {:fn-deprecated false}}
+          :output-to "lib/tests.js"}}}
