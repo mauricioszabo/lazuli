@@ -22,7 +22,8 @@
 
         :dev {:closure-defines {lazuli.aux/TESTS true
                                 com.wsscode.pathom.misc.INCLUDE_SPECS false}}
-        :compiler-options {:warnings {:fn-deprecated false}}
+        :compiler-options {:warnings {:fn-deprecated false}
+                           :output-feature-set :es-next}
         :exports {:deactivate lazuli.core/deactivate
 
                   :config lazuli.core/config
@@ -51,5 +52,6 @@
 
   :tests {:target :node-script
           :main lazuli.core-test/run-tests
-          :compiler-options {:warnings {:fn-deprecated false}}
+          :compiler-options {:warnings {:fn-deprecated false}
+                             :load-tests true}
           :output-to "lib/tests.js"}}}
