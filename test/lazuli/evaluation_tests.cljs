@@ -44,7 +44,7 @@
         (check (h/result-with! pulsar "\"21\"") => "\"21\"")))))
 
 (deftest watch-points
-  (h/with-pulsar [pulsar :debug true]
+  (h/with-pulsar [pulsar]
     (async-test "can evaluate commands in watch points" {:timeout 20000 :teardown (h/reset-editor! pulsar)}
       (h/open! pulsar "main.rb")
       (h/connect-modal! pulsar)
