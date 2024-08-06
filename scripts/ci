@@ -1,12 +1,23 @@
 #!/bin/bash
 
-echo "--- LOAD IMAGE ---"
-docker load -i docker-image.img
+set -euo pipefail
 
-echo "--- FIRE UP INTEGRATION TESTS ---"
-docker run --rm \
-    -it \
-    --network=host \
-    -u root \
-    -v ~/junit/test-results.xml:/tmp/junit \
-    atom
+echo "--- STARTING CLONE ---"
+git submodule init
+cp .git/config /tmp/config
+sed 's/git.gitlab.com:clj-editors.tango/https:\/\/gitlab.com\/clj-editors\/tango/' /tmp/config > .git/config
+sed 's/git.gitlab.com:clj-editors.saphire/https:\/\/gitlab.com\/clj-editors\/saphire/' /tmp/config > .git/config
+git submodule update
+
+echo "--- Install Pulsar and dependencies ---"
+wget 'https://download.pulsar-edit.dev/?os=linux&type=linux_deb'
+sudo dpkg -i *deb
+sudo apt-get -y -f install nodejs openjdk-11-jdk ruby xvfb
+
+echo "--- Compile Lazuli and tests ---"
+npx shadow-cljs release dev tests
+
+echo "--- Prepare an env for Pulsar and to run tests ---"
+ruby test/ruby_example/main.rb &
+sudo gem install nrepl-lazuli
+node lib/tests.js
