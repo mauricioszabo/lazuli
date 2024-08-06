@@ -15,7 +15,7 @@ sed 's/git.gitlab.com:clj-editors.saphire/https:\/\/gitlab.com\/clj-editors\/sap
 git submodule update
 
 echo "--- Install dependencies ---"
-sudo apt-get -y install nodejs openjdk-11-jdk ruby xvfb
+sudo apt-get -y install nodejs openjdk-11-jdk ruby xvfb ffmpeg
 
 echo "--- Compile Lazuli and tests ---"
 npm i
@@ -26,4 +26,7 @@ gem install nrepl-lazuli
 ruby -r rubygems test/ruby_example/main.rb &
 Xvfb :0 &
 export DISPLAY=:0
+
+mkdir ~/video
+nohup ffmpeg -video_size 1024x768 -f x11grab -i :0.0 ~/video/out.mpg &
 node lib/tests.js
