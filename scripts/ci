@@ -29,4 +29,7 @@ export DISPLAY=:0
 
 mkdir ~/video
 nohup ffmpeg -video_size 1024x768 -f x11grab -i :0.0 ~/video/out.mpg &
+export ATOM_HOME=/tmp/atom-ci
+mkdir /tmp/atom-ci/packages -p
+ln -s `pwd` /tmp/atom-ci/packages
 node lib/tests.js
