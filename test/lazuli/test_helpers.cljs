@@ -29,7 +29,7 @@
 
 (defn run-pulsar! []
   (let [env (.-env js/process)
-        config (clj->js {:args ["--no-sandbox" fixture-path]
+        config (clj->js {:args ["--clear-window-state" "--no-sandbox" fixture-path]
                          :cwd fixture-path
                          :env env
                          :timeout 50000
@@ -37,7 +37,9 @@
     (p/let [^js app (.launch electron config)
             ^js page (.firstWindow app)
             return {:app app :page page}]
-      (.toBeVisible (expect-first! return ".tab-bar"))
+      (.toBeVisible (expect-first! return ".tab-bar")
+                    #js {:timeout 20000})
+      (run-command! return "Tree View: Toggle")
       (run-command! return "Tabs: Close All Tabs")
       (run-command! return "Tabs: Close All Tabs")
       (run-command! return "Tabs: Close All Tabs")
