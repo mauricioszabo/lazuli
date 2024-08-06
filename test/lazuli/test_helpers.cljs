@@ -29,6 +29,7 @@
 
 (defn run-pulsar! []
   (let [env (.-env js/process)
+        _ (println "Running on path" fixture-path)
         config (clj->js {:args ["--clear-window-state" "--no-sandbox" fixture-path]
                          :cwd fixture-path
                          :env env
