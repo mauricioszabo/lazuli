@@ -1,5 +1,10 @@
 #!/bin/bash
 
+echo "--- Install Pulsar ---"
+wget 'https://download.pulsar-edit.dev/?os=linux&type=linux_deb'
+sudo dpkg -i *deb
+sudo apt-get -y -f install
+
 set -euo pipefail
 
 echo "--- STARTING CLONE ---"
@@ -9,10 +14,7 @@ sed 's/git.gitlab.com:clj-editors.tango/https:\/\/gitlab.com\/clj-editors\/tango
 sed 's/git.gitlab.com:clj-editors.saphire/https:\/\/gitlab.com\/clj-editors\/saphire/' /tmp/config > .git/config
 git submodule update
 
-echo "--- Install Pulsar and dependencies ---"
-wget 'https://download.pulsar-edit.dev/?os=linux&type=linux_deb'
-sudo dpkg -i *deb
-sudo apt-get -y -f install
+echo "--- Install dependencies ---"
 sudo apt-get -y install nodejs openjdk-11-jdk ruby xvfb
 
 echo "--- Compile Lazuli and tests ---"
