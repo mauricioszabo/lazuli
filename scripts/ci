@@ -19,5 +19,7 @@ npx shadow-cljs release dev tests
 
 echo "--- Prepare an env for Pulsar and to run tests ---"
 ruby test/ruby_example/main.rb &
+Xvfb :0 &
+export DISPLAY=:0
 sudo gem install nrepl-lazuli
 node lib/tests.js
