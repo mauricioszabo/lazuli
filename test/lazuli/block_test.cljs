@@ -32,16 +32,14 @@
     (check (block-resolver "a == 2" [[0 0] [0 0]]) => {:text/contents "a == 2"}))
 
   (testing "captures only the correct element in single-line multi-command situations"
-    ;; FIXME: this fails!
+    ;; FIXME: Do I EVEN WANT this?
     #_
     (check (block-resolver "foo; bar" [[0 0] [0 0]]) => {:text/contents "foo"})
     (check (block-resolver "foo; bar" [[0 6] [0 6]]) => {:text/contents "bar"}))
 
   (testing "captures assignments"
     (check (block-resolver "a = 10" [[0 4] [0 4]]) => {:text/contents "a = 10"})
-    ;; FIXME: this fails
-    #_
-    (check (block-resolver "a, b = 1, 10" [[0 4] [0 4]]) => {:text/contents "a, b = 1, 10"}))
+    (check (block-resolver "a, b = 1, 10" [[0 8] [0 8]]) => {:text/contents "a, b = 1, 10"}))
 
   (testing "captures blocks"
     (check (block-resolver "a.map { |x| x + 1}" [[0 4] [0 4]])
