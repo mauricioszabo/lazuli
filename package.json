@@ -29,11 +29,13 @@
     }
   },
   "devDependencies": {
+    "@playwright/test": "^1.45.2",
     "ansi_up": "^4.0.4",
     "bufferutil": "^4.0.1",
     "commonmark": "^0.29.3",
     "create-react-class": "^15.6.3",
     "grim": "^2.0.2",
+    "highlight.js": "^11.0.1",
     "playwright": "^1.45.2",
     "react": "^16.3.0",
     "react-dom": "^16.13.0",
@@ -42,8 +44,8 @@
     "source-map-support": "^0.5.13",
     "utf-8-validate": "^5.0.2",
     "web-tree-sitter": "^0.20.8",
-    "ws": "^7.1.2",
-    "@playwright/test": "^1.45.2",
-    "highlight.js": "^11.0.1"
+    "ws": "^7.1.2"
+  },
+  "dependencies": {
   }
 }
