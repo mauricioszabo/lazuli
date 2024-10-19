@@ -83,6 +83,7 @@
           start (.-start range)
           end (.-end range)]
       {:editor editor
+       :language (-> editor .getGrammar .-name str/lower-case keyword)
        :contents (.getText editor)
        :filename (.getPath editor)
        :range [[(.-row start) (.-column start)]
@@ -120,12 +121,14 @@
         (display! path)))))
 
 (defn- stop-changing! [state ^js editor ^js changes]
+  (js/console.log "CHANGES", changes)
   (when-let [path (.getPath editor)]
     (let [update! (-> @state :editor/features :update-watches)
           render-watches! (-> @state :editor/features :render-watches)]
       (doseq [^js change (.-changes changes)
               :let [delta (- (.. change -newExtent -row) (.. change -oldExtent -row))]
               :when (not= 0 delta)]
+        (prn :DELTA delta :ROW (.. change -oldStart -row))
         (update! path (.. change -oldStart -row) delta)))))
 
 (defn- observe-editors! [state, ^js editor]
@@ -188,7 +191,7 @@
     {:max-traces (-> config (aget "number-of-traces"))
      :project-paths (into [] (.. js/atom -project getPaths))
      ;; Compatibility with Duck-REPLed
-     :eval-mode :clj
+     :eval-mode :prefer-cljs
      :console-pos (-> config (aget "console-pos") keyword)}))
 
 (defn- open-console! [repl-state]
