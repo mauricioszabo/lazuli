@@ -11,8 +11,7 @@
                 ;; Tango dependencies
                 [reagent "1.2.0"]
                 [org.babashka/sci "0.8.40"]
-                [link.szabo.mauricio/duck-repled "2024-02-12.04.17"]
-                [link.szabo.mauricio/orbit "2024-05-15.02.52"]]
+                [link.szabo.mauricio/duck-repled "2024-10-19.04.24"]]
 
  :builds
  {:dev {:target :node-library
