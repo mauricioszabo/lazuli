@@ -225,6 +225,5 @@
                                                      :set-console? true})]
      (when repl-state
        (reset! console ((-> @repl-state :editor/callbacks :get-console)))
-       (reset! lazuli-complete/state repl-state)
        (reset! symbols/find-symbol (-> @repl-state :editor/features :find-definition))
        (swap! connections assoc id repl-state)))))
