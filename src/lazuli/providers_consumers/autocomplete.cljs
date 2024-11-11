@@ -8,39 +8,21 @@
             [lazuli.state :as state]
             ["atom" :refer [Range]]))
 
-#_
-(.. js/atom -ui -fuzzyMatcher (setCandidates #js ["foo" "foa"]) (match "fo"))
-
-; (defonce state (atom nil))
-
-#_
-(defn- min-word-size []
-  (.. js/atom -config (get "autocomplete-plus.minimumWordLength")))
-
-#_
-(defn- re-escape [string]
-  (str/replace string #"[\|\\\{\}\(\)\[\]\^\$\+\*\?\.\-\/]" "\\$&"))
-
-#_
-(defn- get-prefix [^js editor candidate]
-  (let [non-word-chars (distinct (re-seq #"[^\w]" candidate))
-        reg (re-pattern (str "[\\w" (re-escape (str/join "" non-word-chars)) "]+"))
-        ^js cursor (-> editor .getCursors first)
-        word-range (new Range
-                     (.getBeginningOfCurrentWordBufferPosition cursor #js {:wordRegex reg})
-                     (.getBufferPosition cursor))]
-    (.getTextInRange editor word-range)))
-
 (defn- treat-result [editor prefix {:keys [text/contents completion/type]}]
-  (prn :WAT?)
   (let [[icon-name multiplier] (case type
+                                 :enum ["book status-modified" 1]
+                                 :function ["package status-renamed" 1]
+                                 :keyword ["tag-add status-renamed" 1]
+                                 :macro ["circuit-board status-renamed" 1]
+                                 :namespace ["code status-renamed" 1]
+                                 :var ["package status-renamed" 1]
+                                 :special-form ["key status-modified" 0.7]
                                  :local ["location status-modified" 1]
-                                 :method/public ["organization status-renamed" 0.9]
+                                 :method/public ["package status-renamed" 0.9]
                                  :method/protected ["person status-modified" 0.8]
                                  :method/private ["lock status-removed" 0.5]
                                  :property ["mention status-renamed" 0.9]
                                  :constant ["package status-renamed" 0.6]
-                                 :keyword ["tag-add status-renamed" 0.2]
                                  ["question" 0.1])
         filter (str/replace prefix #"^:" "")
         match (.. js/atom -ui -fuzzyMatcher
@@ -54,19 +36,6 @@
            :characterMatchIndices (.-matchIndexes match)
            :iconHTML (str "<i class='icon-" icon-name "'></i>")
            :replacementPrefix prefix})))
-
-#_
-(try
-  (->> completions
-               :completions/all
-               ; (#(doto % (prn :FIRST)))
-               (map #(treat-result editor (:completions/prefix completions) %))
-               (#(doto % (prn :SECOND)))
-               (sort-by #(- (.-score ^js %)))
-               (#(doto % (prn :THIRD)))
-               into-array)
-  (catch :default e
-    (prn :E e)))
 
 (defn suggestions [{:keys [^js editor activatedManually]}]
   (p/let [state (-> editor .getGrammar .-name str/lower-case keyword state/get-state)
@@ -84,7 +53,7 @@
 
 (def provider
   (fn []
-    #js {:selector ".source.ruby"
+    #js {:selector ".source.ruby,.source.clojure"
          :disableForSelector ".source.ruby .comment"
 
          :inclusionPriority 100
