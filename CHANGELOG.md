@@ -1,5 +1,14 @@
 ## Planned/TODO
 
+# 0.2.0
+- Added support for Clojure and ClojureScript (with Shadow-CLJS)
+- Watch points now can be deleted
+- Watch points will be updated if you change the editor (this implementation is still a little buggy)
+- Better support for manually defining watch expressions with some IDs
+- Better autocomplete support (for Ruby and Clojure)
+- Capturing error in Shadow and displaying on the build info
+- Added keymaps by default
+
 # 0.1.0
 - Fixed "top block"
 - Fixed `NREPL.watch!` watch point not being used
