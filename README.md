@@ -101,7 +101,8 @@ If you do, while in Normal Mode, these keybindings will be bound to `g f` (go to
 
 ### Code Contributors
 
-This project, and others exist thanks to all the people who contribute, both from this repo or from the old Chlorine one. [[Contribute](docs/developing.md)].
+This project, and others exist thanks to all the people who contribute, both from this repo or from the old Chlorine one.
+
 <a href="https://github.com/mauricioszabo/atom-chlorine/graphs/contributors"><img src="https://opencollective.com/atom-chlorine/contributors.svg?width=890&button=false" /></a>
 
 Please notice that the contributions mention Chlorine. Both Lazuli and Chlorine
