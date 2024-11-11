@@ -16,7 +16,6 @@
             [lazuli.providers-consumers.autocomplete :as lazuli-complete]
             [lazuli.providers-consumers.symbols :as symbols]
             [saphire.code-treatment :as treat]
-            [saphire.ui.interface :as interface]
             [lazuli.ruby-parsing :as rp]
             [com.wsscode.pathom3.connect.operation :as connect]
             [tango.ui.elements :as ui]
@@ -121,14 +120,14 @@
         (display! path)))))
 
 (defn- stop-changing! [state ^js editor ^js changes]
-  (js/console.log "CHANGES", changes)
+  ; (js/console.log "CHANGES", changes)
   (when-let [path (.getPath editor)]
     (let [update! (-> @state :editor/features :update-watches)
           render-watches! (-> @state :editor/features :render-watches)]
       (doseq [^js change (.-changes changes)
               :let [delta (- (.. change -newExtent -row) (.. change -oldExtent -row))]
               :when (not= 0 delta)]
-        (prn :DELTA delta :ROW (.. change -oldStart -row))
+        ; (prn :DELTA delta :ROW (.. change -oldStart -row))
         (update! path (.. change -oldStart -row) delta)))))
 
 (defn- observe-editors! [state, ^js editor]
@@ -162,7 +161,7 @@
     (inline/update! connection result)
 
     (when-let [div (.querySelector console (str "#" (:id result)))]
-      (.. div -classList (remove "pending"))
+      (doto (. div -classList) (.remove "pending") (.add "result"))
       (let [parse (-> @connection :editor/features :result-for-renderer)
             hiccup (parse result connection)]
         (set! (.-innerHTML div) "")
