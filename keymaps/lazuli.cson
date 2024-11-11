@@ -1,21 +1,21 @@
-'atom-text-editor':
+'atom-workspace atom-text-editor:not([mini])':
   'ctrl-d': 'lazuli:doc-for-var'
   'ctrl-c': 'lazuli:break-evaluation'
   'shift-enter': 'lazuli:evaluate-block'
   'ctrl-enter': 'lazuli:evaluate-top-block'
 
-'atom-text-editor:not([vim-mode-plus])':
-  'ctrl+alt+shit+down': 'lazuli:go-to-var-definition'
+'atom-workspace atom-text-editor:not([mini]):not([vim-mode-plus])':
+  'ctrl-alt-shift-down': 'lazuli:go-to-var-definition'
   'ctrl-shift-c': 'lazuli:clear-console'
   'ctrl-shift-i': 'lazuli:clear-inline-results'
 
-'atom-text-editor.has-selection':
+'atom-workspace atom-text-editor.has-selection':
   'ctrl-enter': 'lazuli:evaluate-selection'
 
-'atom-text-editor.vim-mode-plus.visual-mode':
+'atom-workspace atom-text-editor.vim-mode-plus.visual-mode':
   'space space': 'lazuli:clear-inline-results'
 
-'atom-text-editor.vim-mode-plus.normal-mode':
+'atom-workspace atom-text-editor.vim-mode-plus.normal-mode':
   'g f': 'lazuli:go-to-var-definition'
   'space l': 'lazuli:clear-console'
   'space a': 'lazuli:load-file'
