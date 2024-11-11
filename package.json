@@ -1,13 +1,17 @@
 {
   "name": "lazuli",
   "main": "./lib/main",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Interactive nREPL client for Ruby",
   "keywords": [
     "ruby",
     "repl",
     "interactive",
-    "nrepl"
+    "nrepl",
+    "clojure",
+    "clojurescript",
+    "babashka",
+    "interactive"
   ],
   "repository": "https://gitlab.com/clj-editors/lazuli",
   "license": "MIT",
@@ -18,13 +22,6 @@
     "autocomplete.provider": {
       "versions": {
         "5.0.0": "autocomplete_provider"
-      }
-    }
-  },
-  "consumedServices": {
-    "lsp.command": {
-      "versions": {
-        "0.1.0": "lsp_consumer"
       }
     }
   },
@@ -39,13 +36,11 @@
     "playwright": "^1.45.2",
     "react": "^16.3.0",
     "react-dom": "^16.13.0",
-    "shadow-cljs": "^2.28.3",
+    "shadow-cljs": "^2.28.18",
     "source-map-js": "^1.2.0",
     "source-map-support": "^0.5.13",
     "utf-8-validate": "^5.0.2",
     "web-tree-sitter": "^0.20.8",
     "ws": "^7.1.2"
-  },
-  "dependencies": {
   }
 }
