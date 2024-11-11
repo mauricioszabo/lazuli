@@ -11,7 +11,7 @@
                 ;; Tango dependencies
                 [reagent "1.2.0"]
                 [org.babashka/sci "0.8.40"]
-                [link.szabo.mauricio/duck-repled "2024-10-19.04.24"]]
+                [link.szabo.mauricio/duck-repled "2024-11-07.00.59"]]
 
  :builds
  {:dev {:target :node-library
@@ -21,7 +21,9 @@
 
         :dev {:closure-defines {lazuli.aux/TESTS true
                                 com.wsscode.pathom.misc.INCLUDE_SPECS false}}
-        :compiler-options {:warnings {:fn-deprecated false}
+        :compiler-options {:warnings {:fn-deprecated false
+                                      :redef false
+                                      :redef-in-file false}
                            :output-feature-set :es-next}
         :exports {:deactivate lazuli.core/deactivate
 
