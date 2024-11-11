@@ -1,28 +1,36 @@
 # Lazuli
 
-Interactive development with Ruby for the [Pulsar](https://pulsar-edit.dev/) editor!
+Interactive development with Ruby and Clojure for the [Pulsar](https://pulsar-edit.dev/) editor!
 
-Lazuli is a port (kind of!) of
-[Chlorine](https://gitlab.com/clj-editors/atom-chlorine), for the Clojure
-language. It aims to bring the features of Chlorine to the Ruby language -
-basically, semantic autocomplete and go to var definition using runtime
-information (that is, a code that _is running_) instead of relying on static
-analysis that might miss most cases, like dynamic definition of methods using
-`has_many`, `belongs_to`, or even by defining routes in Rails
+Lazuli the evolution of
+[Chlorine](https://gitlab.com/clj-editors/atom-chlorine), for the both Clojure
+and Ruby languages (and possibly more in the future!). It aims to bring the
+features of Chlorine to any supported language - basically, semantic
+autocomplete and go to var definition using runtime information (that is, a code
+that _is running_) instead of relying on static analysis that might miss most
+cases, like dynamic definition of methods using `has_many`, `belongs_to`, or
+even by defining routes in Rails
 
 ## Features
 
-Lazuli connects to [nrepl-lazuli](https://gitlab.com/clj-editors/nrepl-lazuli)
-and uses runtime info to evaluate code inside the editor. It also adds some
-semantic information like where some method was defined, trying to avoid going
-to the first definition (which usually is just a Gem or other library) and
-matching the actual user's code (as it's possible to see in the example below,
-where Go To Var Definition goes to `has_many` and to the actual `routes.rb`). It
-also adds semantic autocomplete, meaning that it uses runtime info to actually
-_run code_ to complete stuff (that might be dangerous if one of the code is
-trying to remove a file, for example, so use it with caution).
+Lazuli connects to a nREPL server like [nrepl-lazuli for
+Ruby](https://gitlab.com/clj-editors/nrepl-lazuli), or [nREPL for
+Clojure](https://github.com/nrepl/nrepl). For ClojureScript, it also allows you
+to connect directly to Shadow-CLJS.
+
+It will use runtime information to evaluate code inside the editor, and also add
+some  semantic information like where some function/method was defined. In Ruby,
+for example, it'll try to avoid going to the first definition (which usually is
+just a Gem or other library) and match the actual user's code (as it's possible
+to see in the example below, where Go To Var Definition goes to `has_many` and
+to the actual `routes.rb`). It also adds semantic autocomplete, meaning that it
+uses runtime info to actually _run code_ to complete stuff (that might be
+dangerous if one of the code is trying to remove a file, for example, so use it
+with caution).
 
 ![Evaluating code](docs/eval-code.gif)
+
+## For Ruby
 
 ### Tracing
 
@@ -72,15 +80,6 @@ will happily use the first method's watch point and we will have an unreliable
 result - that is, `a` and `b` being strings instead of numbers. To fix this,
 just run some code that touches `other_thing`.
 
-### Breakpoints
-
-Not fully correct yet, but in the future it might be possible to add
-"breakpoints" - that is, a code that stops all evaluation but allows Lazuli to
-keep running that specific line, making changes, up to the point we can
-"release" the breakpoint inside the editor. Might be a **huge advantage** on
-fixing bugs that are caused for things that need more context, for example
-database transactions.
-
 ## Usage:
 
 Install [nrepl-lazuli](https://gitlab.com/clj-editors/nrepl-lazuli) and
@@ -90,58 +89,19 @@ evaluate, to generate traces and watch points. Then, have fun!
 
 ## Keybindings:
 
-This package does not register any keybindings (for now, at
-#least) to avoid keybinding conflict issues. You can define whatever you want
-#via keymap.cson. The following have worked for some people:
+By default, the package register keybindings for evaluating code. CTRL+Enter will evaluate a "top-block" and SHIFT+Enter will evaluate a "block". See [docs/blocks.md](docs/blocks.md) to check what are these things.
 
-**If you use vim-mode-plus:**
+If you have something selected, you can hit "CTRL+Enter" to evaluate only the selected text. With Ruby, this will also use the "watch points" so you can evaluate a local variable if you have a watch point with that binding saved.
 
-```cson
-'atom-text-editor.vim-mode-plus.normal-mode':
-  'g f':          'lazuli:go-to-var-definition'
-  'space l':      'lazuli:clear-console'
-  'shift-enter':  'lazuli:evaluate-line'
-  'ctrl-enter':   'lazuli:evaluate-top-block'
-  'ctrl-c':       'lazuli:break-evaluation'
-  'space space':  'lazuli:clear-inline-results'
+### Additional bindings
 
-'atom-text-editor.vim-mode-plus.insert-mode':
-  'shift-enter': 'lazuli:evaluate-line'
-  'ctrl-enter': 'lazuli:evaluate-top-block'
-```
+Lazuli will also define `ctrl-alt-shift-down` to "goto definition", `ctrl-shit-c` to clear-console, and `ctrl-shit-i` to clear the inline results. These will be bound only if you don't use the VIM-Mode Plus package.
 
-**If you don't use vim bindings:**
-
-```cson
-'atom-text-editor':
-  'ctrl-; y':       'lazuli:connect-socket-repl'
-  'ctrl-; e':       'lazuli:disconnect'
-  'ctrl-; k':       'lazuli:clear-console'
-  'ctrl-; b':       'lazuli:evaluate-line'
-  'ctrl-; B':       'lazuli:evaluate-top-block'
-  'ctrl-; s':       'lazuli:evaluate-selection'
-  'ctrl-; c':       'lazuli:break-evaluation'
-```
-
-Other command you might want to add is `lazuli:go-to-var-definition`.
-
-## Future
-
-There might be a way to peek definitions, show documentation of functions, run
-tests and other features. One thing I want to add is the ability to run tests
-and capture watch expressions, keeping the interpreter open so it might be
-possible, and maybe even easy, do debug failures and automatically fix them
-inside the editor.
-
-Interpretation of Ruby results in on radar - basically, when an exception
-happens, show stacktraces inside the editor, or when it doesn't happen, have a
-"pretty-printable" version of the result - maybe even with some introspection
-features like "if the result is a class, get the methods of it to show what the
-class supports"
+If you do, while in Normal Mode, these keybindings will be bound to `g f` (go to definition), `space l` to clear console, and `space space` to clear the inline results. You can change these bindings on your keymaps file, and you can add more keybindings at any time.
 
 ### Code Contributors
 
-This project, and others exist thanks to all the people who contribute. [[Contribute](docs/developing.md)].
+This project, and others exist thanks to all the people who contribute, both from this repo or from the old Chlorine one. [[Contribute](docs/developing.md)].
 <a href="https://github.com/mauricioszabo/atom-chlorine/graphs/contributors"><img src="https://opencollective.com/atom-chlorine/contributors.svg?width=890&button=false" /></a>
 
 Please notice that the contributions mention Chlorine. Both Lazuli and Chlorine
