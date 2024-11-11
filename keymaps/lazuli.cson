@@ -1,0 +1,18 @@
+'atom-text-editor':
+  'ctrl-d': 'lazuli:doc-for-var'
+  'ctrl-c': 'lazuli:break-evaluation'
+  'shift-enter': 'lazuli:evaluate-block'
+  'ctrl-enter': 'lazuli:evaluate-top-block'
+
+'atom-text-editor.has-selection':
+  'ctrl-enter': 'lazuli:evaluate-selection'
+
+'atom-text-editor.vim-mode-plus.visual-mode':
+  'space space': 'lazuli:clear-inline-results'
+
+'atom-text-editor.vim-mode-plus.normal-mode':
+  'g f': 'lazuli:go-to-var-definition'
+  'space l': 'lazuli:clear-console'
+  'space a': 'lazuli:load-file'
+  'space t': 'lazuli:run-tests-in-ns'
+  'space space': 'lazuli:clear-inline-results'
