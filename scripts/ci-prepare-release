@@ -5,11 +5,10 @@ git tag `echo "$CIRCLE_BRANCH-source" | sed s/release-//`
 git config --global user.email "circleci@lazuli.plugin" &&
 git config --global user.name "CircleCI Automated Build" &&
 
+sed -i 's/https.*gitlab.*lazuli/https:\/\/github.com\/mauricioszabo\/lazuli/' package.json
 git checkout -b release-prepare-DELETE-THIS &&
 git rm -r src integration scripts &&
-git add -f lib/cmds.js lib/main.js &&
+git add -f lib/cmds.js lib/main.js package.json &&
 git commit -m 'Compiled version for release' &&
 git tag `echo $CIRCLE_BRANCH | sed s/release-//` &&
 git push --tags
-
-sed -i 's/https.*gitlab.*lazuli/https:\/\/github.com\/mauricioszabo\/lazuli/' package.json

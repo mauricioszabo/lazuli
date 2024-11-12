@@ -53,9 +53,9 @@
         (.appendChild div (ui/dom hiccup))))))
 
 (defn all-parsed-results []
-  (for [[_ {:keys [parsed]}] @results
-        :when parsed]
-    parsed))
+  (for [[_ {:keys [div]}] @results
+        :when div]
+    div))
 
 (defn clear-results! [curr-editor]
   (doseq [[_ {:keys [editor marker]}] @results

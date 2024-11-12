@@ -1,7 +1,8 @@
-{:source-paths ["src"
+{:source-paths ["src" "test"
                 ; "repl-tooling/src" "repl-tooling/test"
                 ; "repl-tooling/orbit/src" "repl-tooling/orbit/test"
                 "tango/src"
+                "saphire/src"
                 "sci.configs/src"
                 "repl-tooling/resources"]
 
@@ -10,8 +11,7 @@
                 ;; Tango dependencies
                 [reagent "1.2.0"]
                 [org.babashka/sci "0.8.40"]
-                [link.szabo.mauricio/duck-repled "2024-02-12.04.17"]
-                [link.szabo.mauricio/orbit "2024-05-15.02.52"]]
+                [link.szabo.mauricio/duck-repled "2024-11-07.00.59"]]
 
  :builds
  {:dev {:target :node-library
@@ -21,7 +21,10 @@
 
         :dev {:closure-defines {lazuli.aux/TESTS true
                                 com.wsscode.pathom.misc.INCLUDE_SPECS false}}
-        :compiler-options {:warnings {:fn-deprecated false}}
+        :compiler-options {:warnings {:fn-deprecated false
+                                      :redef false
+                                      :redef-in-file false}
+                           :output-feature-set :es-next}
         :exports {:deactivate lazuli.core/deactivate
 
                   :config lazuli.core/config
@@ -46,5 +49,10 @@
 
         :output-dir "lib/js"
         :output-to "lib/cmds.js"
-        :devtools {:preloads []}}}};orbit.serializer-test
-                              ;flow-storm.api
+        :devtools {:preloads []}}
+
+  :tests {:target :node-script
+          :main lazuli.core-test/run-tests
+          :compiler-options {:warnings {:fn-deprecated false}
+                             :load-tests true}
+          :output-to "lib/tests.js"}}}

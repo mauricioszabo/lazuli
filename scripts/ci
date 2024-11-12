@@ -1,12 +1,35 @@
 #!/bin/bash
 
-echo "--- LOAD IMAGE ---"
-docker load -i docker-image.img
+echo "--- Install Pulsar ---"
+wget 'https://download.pulsar-edit.dev/?os=linux&type=linux_deb'
+sudo dpkg -i *deb
+sudo apt-get -y -f install
 
-echo "--- FIRE UP INTEGRATION TESTS ---"
-docker run --rm \
-    -it \
-    --network=host \
-    -u root \
-    -v ~/junit/test-results.xml:/tmp/junit \
-    atom
+set -euo pipefail
+
+echo "--- STARTING CLONE ---"
+git submodule init
+cp .git/config /tmp/config
+sed 's/git.gitlab.com:clj-editors.tango/https:\/\/gitlab.com\/clj-editors\/tango/' /tmp/config > .git/config
+sed 's/git.gitlab.com:clj-editors.saphire/https:\/\/gitlab.com\/clj-editors\/saphire/' /tmp/config > .git/config
+git submodule update
+
+echo "--- Install dependencies ---"
+sudo apt-get -y install nodejs openjdk-11-jdk ruby xvfb ffmpeg
+
+echo "--- Compile Lazuli and tests ---"
+npm i
+npx shadow-cljs release dev tests
+
+echo "--- Prepare an env for Pulsar and to run tests ---"
+gem install nrepl-lazuli
+bash -c 'cd test/ruby_example; ruby -r rubygems main.rb &'
+Xvfb :0 &
+export DISPLAY=:0
+
+mkdir ~/video
+nohup ffmpeg -video_size 1024x768 -f x11grab -i :0.0 ~/video/out.mpg &
+export ATOM_HOME=/tmp/atom-ci
+mkdir /tmp/atom-ci/packages -p
+ln -s `pwd` /tmp/atom-ci/packages
+node lib/tests.js

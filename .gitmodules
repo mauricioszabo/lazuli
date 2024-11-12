@@ -1,3 +1,7 @@
 [submodule "tango"]
 	path = tango
 	url = git@gitlab.com:clj-editors/tango
+
+[submodule "saphire"]
+	url = git@gitlab.com:clj-editors/saphire.git
+	path = saphire

@@ -2,78 +2,58 @@
   (:require [clojure.walk :as walk]
             [clojure.string :as str]
             [promesa.core :as p]
-            [lazuli.code-treatment :as treat]
+            [saphire.code-treatment :as treat]
             [orbit.evaluation :as eval]
+            [saphire.complete :as complete]
+            [lazuli.state :as state]
             ["atom" :refer [Range]]))
 
-(defonce state (atom nil))
+(defn- treat-result [editor prefix {:keys [text/contents completion/type]}]
+  (let [[icon-name multiplier] (case type
+                                 :enum ["book status-modified" 1]
+                                 :function ["package status-renamed" 1]
+                                 :keyword ["tag-add status-renamed" 1]
+                                 :macro ["circuit-board status-renamed" 1]
+                                 :namespace ["code status-renamed" 1]
+                                 :var ["package status-renamed" 1]
+                                 :special-form ["key status-modified" 0.7]
+                                 :local ["location status-modified" 1]
+                                 :method/public ["package status-renamed" 0.9]
+                                 :method/protected ["person status-modified" 0.8]
+                                 :method/private ["lock status-removed" 0.5]
+                                 :property ["mention status-renamed" 0.9]
+                                 :constant ["package status-renamed" 0.6]
+                                 ["question" 0.1])
+        filter (str/replace prefix #"^:" "")
+        match (.. js/atom -ui -fuzzyMatcher
+                  (match (str/replace contents #"^:" "") filter #js {:recordMatchIndexes true}))]
 
-(defn- min-word-size []
-  (.. js/atom -config (get "autocomplete-plus.minimumWordLength")))
+    ; (prn :C contents)
+    ; (prn :SUG prefix contents (.. js/atom -ui -fuzzyMatcher (score contents filter)))
+    (when-let [score (some-> match .-score)]
+      #js {:text contents
+           :score (* multiplier score)
+           :characterMatchIndices (.-matchIndexes match)
+           :iconHTML (str "<i class='icon-" icon-name "'></i>")
+           :replacementPrefix prefix})))
 
-(defn- re-escape [string]
-  (str/replace string #"[\|\\\{\}\(\)\[\]\^\$\+\*\?\.\-\/]" "\\$&"))
-
-(defn- get-prefix [^js editor candidate]
-  (let [non-word-chars (distinct (re-seq #"[^\w]" candidate))
-        reg (re-pattern (str "[\\w" (re-escape (str/join "" non-word-chars)) "]+"))
-        ^js cursor (-> editor .getCursors first)
-        word-range (new Range
-                     (.getBeginningOfCurrentWordBufferPosition cursor #js {:wordRegex reg})
-                     (.getBufferPosition cursor))]
-    (.getTextInRange editor word-range)))
-
-(defn- treat-result [editor [kind suggestion]]
-  (let [icon-name (case kind
-                    "local_var" "chevron-right status-modified"
-                    "pub_method" "eye status-renamed"
-                    "priv_method" "stop status-removed"
-                    "prot_method" "lock status-modified"
-                    "instance_var" "mention status-renamed"
-                    "class_var" "mention status-renamed"
-                    "constant" "package status-renamed"
-                    "question")]
-    {:text suggestion
-     :iconHTML (str "<i class='icon-" icon-name "'></i>")
-     :replacementPrefix (get-prefix editor suggestion)}))
-
-(defn suggestions [{:keys [editor activatedManually]}]
-  (p/let [dissected (treat/dissect-editor-contents @state)
-          watch-id (treat/watch-id-for-code @state)
-          res (treat/eql @state [:repl/evaluator
-                                 {:editor/contents [:editor/filename :text/range]}])
-          evaluator (:repl/evaluator res)
-          editor-info (:editor/contents res)
-          method-code (str "binding.local_variables.map { |m| ['local_var', m.to_s] } + "
-                           "__self__.public_methods.map { |m| ['pub_method', m.to_s] } + "
-                           "__self__.private_methods.map { |m| ['priv_method', m.to_s] } + "
-                           "__self__.protected_methods.map { |m| ['prot_method', m.to_s] }")
-          code (case (:type dissected)
-                 "constant" "::Object.constants.map { |i| ['constant', i.to_s] }"
-                 "instance_variable" "instance_variables.map { |i| ['instance_var', i.to_s] }"
-                 "class_variable" "class_variables.map { |i| ['class_var', i.to_s] }"
-                 "identifier" (str/replace method-code #"__self__\." "")
-                 "scope_resolution" (str (:callee dissected) ".constants.map { |i| ['constant', i.to_s] }")
-                 "call" (if (-> dissected :sep (= "::"))
-                          (str (:callee dissected) ".constants.map { |i| ['constant', i.to_s] }")
-                          (str/replace method-code #"__self__" (:callee dissected))))]
-
-    (p/catch
-     (p/let [res (try (eval/evaluate evaluator
-                                     (cond-> {:code code
-                                              :file (-> editor-info :editor/filename)
-                                              :line (-> editor-info :text/range ffirst)}
-                                       watch-id (assoc :watch_id watch-id))
-                                     {:plain true :options {:op "eval"}})
-                   (catch :default _))]
-       (clj->js (map #(treat-result editor %) res)))
-     (constantly nil))))
+(defn suggestions [{:keys [^js editor activatedManually]}]
+  (p/let [state (-> editor .getGrammar .-name str/lower-case keyword state/get-state)
+          eql (-> @state :editor/features :eql)
+          completions (eql [{:editor/contents [:completions/all :completions/prefix]}])
+          completions (:editor/contents completions)]
+    (->> completions
+         :completions/all
+         (map #(treat-result editor (:completions/prefix completions) %))
+         (filter identity)
+         (sort-by #(- (.-score ^js %)))
+         into-array)))
 
 (defn- detailed-suggestion [suggestion])
 
 (def provider
   (fn []
-    #js {:selector ".source.ruby"
+    #js {:selector ".source.ruby,.source.clojure"
          :disableForSelector ".source.ruby .comment"
 
          :inclusionPriority 100
@@ -81,7 +61,7 @@
 
          :suggestionPriority 200
 
-         :filterSuggestions true
+         :filterSuggestions false
 
          :getSuggestions (fn [data]
                            (-> data js->clj walk/keywordize-keys suggestions))
