@@ -8,4 +8,4 @@ npx shadow-cljs release dev &&
 git rm -r src integration scripts &&
 git add -f lib/cmds.js lib/main.js package.json &&
 git commit -m 'Compiled version for release' &&
-echo "Remember to tag your code now, and run push to github
+echo "Remember to tag your code now, and run push to github"
