@@ -95,7 +95,7 @@ If you have something selected, you can hit "CTRL+Enter" to evaluate only the se
 
 ### Additional bindings
 
-Lazuli will also define `ctrl-alt-shift-down` to "goto definition", `ctrl-shit-c` to clear-console, and `ctrl-shit-i` to clear the inline results. These will be bound only if you don't use the VIM-Mode Plus package.
+Lazuli will also define `ctrl-alt-shift-down` to "goto definition", `ctrl-shit-c` to clear-console, and `ctrl-shit-r` to clear the inline results. These will be bound only if you don't use the VIM-Mode Plus package.
 
 If you do, while in Normal Mode, these keybindings will be bound to `g f` (go to definition), `space l` to clear console, and `space space` to clear the inline results. You can change these bindings on your keymaps file, and you can add more keybindings at any time.
 
