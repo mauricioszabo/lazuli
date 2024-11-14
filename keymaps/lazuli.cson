@@ -4,10 +4,10 @@
   'shift-enter': 'lazuli:evaluate-block'
   'ctrl-enter': 'lazuli:evaluate-top-block'
 
-'atom-workspace atom-text-editor:not([mini]):not([vim-mode-plus])':
+'atom-workspace atom-text-editor:not([mini]):not(.vim-mode-plus)':
   'ctrl-alt-shift-down': 'lazuli:go-to-var-definition'
   'ctrl-shift-c': 'lazuli:clear-console'
-  'ctrl-shift-i': 'lazuli:clear-inline-results'
+  'ctrl-shift-r': 'lazuli:clear-inline-results'
 
 'atom-workspace atom-text-editor.has-selection':
   'ctrl-enter': 'lazuli:evaluate-selection'
