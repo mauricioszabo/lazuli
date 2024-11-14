@@ -1,5 +1,13 @@
 ## Planned/TODO
 
+# 0.2.1
+- Re-added config for Clojure evaluation
+- Fixed some cases of Ruby's block evaluation
+- Fixed other cases for Ruby's top-block evaluation (for example, generating an invalid code if you evaluated at the last `end` keyword)
+- Fixed warnings in Shadow-CLJS with older versions of Shadow
+- Fixed a crash when trying to connect two REPLs at the same time
+- Prepared code for config files
+
 # 0.2.0
 - Added support for Clojure and ClojureScript (with Shadow-CLJS)
 - Watch points now can be deleted
