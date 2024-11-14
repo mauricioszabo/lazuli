@@ -189,7 +189,7 @@
   (let [config (.. js/atom -config (get "lazuli"))]
     {:max-traces (-> config (aget "number-of-traces"))
      :project-paths (into [] (.. js/atom -project getPaths))
-     :eval-mode (-> config (aget "eval-mode"))
+     :eval-mode (-> config (aget "eval-mode") keyword)
      :console-pos (-> config (aget "console-pos") keyword)}))
 
 (defn- open-console! [repl-state]
