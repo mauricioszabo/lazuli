@@ -189,8 +189,7 @@
   (let [config (.. js/atom -config (get "lazuli"))]
     {:max-traces (-> config (aget "number-of-traces"))
      :project-paths (into [] (.. js/atom -project getPaths))
-     ;; Compatibility with Duck-REPLed
-     :eval-mode :prefer-cljs
+     :eval-mode (-> config (aget "eval-mode"))
      :console-pos (-> config (aget "console-pos") keyword)}))
 
 (defn- open-console! [repl-state]
