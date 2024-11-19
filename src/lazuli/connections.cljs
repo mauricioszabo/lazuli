@@ -8,7 +8,7 @@
             [tango.ui.edn :as edn]
             [lazuli.ui.atom :as atom]
             [lazuli.ui.inline-results :as inline]
-            [lazuli.ui.console :as console]
+            [lazuli.ui.console :as lazuli-console]
             [tango.ui.console :as tango-console]
             [lazuli.providers-consumers.lsp :as lsp]
             [promesa.core :as p]
@@ -20,10 +20,9 @@
             [com.wsscode.pathom3.connect.operation :as connect]
             [tango.ui.elements :as ui]
             [saphire.connections :as s-connections]
+            [tango.state :as state]
             ["path" :as path]
             ["fs" :as fs]))
-
-(defonce connections (atom (sorted-map)))
 
 (defn destroy! [^js panel]
   (.destroy panel)
@@ -101,11 +100,11 @@
     (.dispose disposable))
   (reset! commands []))
 
-(defn disconnect! [id]
-  (when (get @connections id)
-    (atom/info "Disconnected" "Disconnected from REPL"))
-  (swap! connections dissoc id)
-  (remove-all-commands!))
+(defn disconnect! [state]
+  (let [lang (:text/language @state)]
+    (when (state/get-state lang)
+      (atom/info "Disconnected" "Disconnected from REPL"))
+    (remove-all-commands!)))
 
 (defn- add-command! [command-name command-function]
   (let [disposable (.. js/atom -commands (add "atom-text-editor"
@@ -134,21 +133,22 @@
   (swap! commands conj (.onDidStopChanging editor #(stop-changing! state editor %))))
 
 (defn- register-commands! [console cmds state]
-  (def state state)
   (remove-all-commands!)
-  (swap! commands conj (.. js/atom -workspace (observeActiveTextEditor #(observe-editor! state %))))
-  (swap! commands conj (.. js/atom -workspace (observeTextEditors #(observe-editors! state %))))
+  (when-not ((-> @state :editor/features :is-config?))
+    (swap! commands conj (.. js/atom -workspace (observeActiveTextEditor #(observe-editor! state %))))
+    (swap! commands conj (.. js/atom -workspace (observeTextEditors #(observe-editors! state %)))))
   (doseq [[key {:keys [command]}] cmds]
     (add-command! (name key) command)))
 
-(defn- start-eval! [console result]
+(defn- start-eval! [state result]
   (inline/create! result)
 
-  (let [div (js/document.createElement "div")]
+  (let [con ((:get-console (:editor/callbacks @state)))
+        div (js/document.createElement "div")]
     (set! (.-id div) (:id result))
     (.. div -classList (add "content" "pending"))
     (set! (.-innerHTML div) "<div class='tango icon-container'><span class='icon loading'></span></div>")
-    (tango-console/append console div ["icon-code"])
+    (tango-console/append con div ["icon-code"])
     (js/setTimeout (fn []
                      (when (.. div -classList (contains "pending"))
                        (.. div -classList (remove "pending"))
@@ -156,14 +156,14 @@
                          "<div class='result error'>Timed out while waiting for a result</div>")))
                    30000)))
 
-(defn- did-eval! [console conn-id result]
-  (let [connection (get @connections conn-id)]
-    (inline/update! connection result)
+(defn- did-eval! [state result]
+  (let [con ((:get-console (:editor/callbacks @state)))]
+    (inline/update! state result)
 
-    (when-let [div (.querySelector console (str "#" (:id result)))]
+    (when-let [div (.querySelector con (str "#" (:id result)))]
       (doto (. div -classList) (.remove "pending") (.add "result"))
-      (let [parse (-> @connection :editor/features :result-for-renderer)
-            hiccup (parse result connection)]
+      (let [parse (-> @state :editor/features :result-for-renderer)
+            hiccup (parse result state)]
         (set! (.-innerHTML div) "")
         (.appendChild div (ui/dom hiccup))))))
 
@@ -193,8 +193,8 @@
      :console-pos (-> config (aget "console-pos") keyword)}))
 
 (defn- open-console! [repl-state]
-  (console/open-console (.. js/atom -config (get "lazuli.console-pos"))
-                        #((-> @repl-state :editor/commands :disconnect :command))))
+  (lazuli-console/open-console (.. js/atom -config (get "lazuli.console-pos"))
+                               #((-> @repl-state :editor/commands :disconnect :command))))
 
 (defn connect-nrepl!
   ([]
@@ -203,12 +203,11 @@
                                 (:port @local-state))
                 (destroy! panel))))
   ([host port]
-   (p/let [id (-> @connections keys last inc)
-           console (atom nil)
-           callbacks {:on-disconnect #(disconnect! id)
-                      ;; FIXME - move everything that uses @console to a different callback?
-                      :on-start-eval #(start-eval! @console %)
-                      :on-eval #(did-eval! @console id %)
+   (p/let [console (atom nil)
+           lang (:language (get-editor-data))
+           callbacks {:on-disconnect #(disconnect! %)
+                      :on-start-eval #(start-eval! %1 %2)
+                      :on-eval #(did-eval! %1 %2)
                       :register-commands register-commands!
                       :get-rendered-results #(concat (inline/all-parsed-results)
                                                      (tango-console/all-parsed-results @console))
@@ -223,5 +222,4 @@
                                                      :set-console? true})]
      (when repl-state
        (reset! console ((-> @repl-state :editor/callbacks :get-console)))
-       (reset! symbols/find-symbol (-> @repl-state :editor/features :find-definition))
-       (swap! connections assoc id repl-state)))))
+       (reset! symbols/find-symbol (-> @repl-state :editor/features :find-definition))))))
