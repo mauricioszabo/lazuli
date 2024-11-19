@@ -13,6 +13,9 @@
                 [org.babashka/sci "0.8.40"]
                 [link.szabo.mauricio/duck-repled "2024-11-14.15.13"]]
 
+                ;; Debug
+                ; [com.wsscode/pathom-viz-connector "RELEASE"]]
+
  :builds
  {:dev {:target :node-library
         :js-options {:js-provider :shadow
