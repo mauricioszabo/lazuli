@@ -5,7 +5,7 @@
             [saphire.code-treatment :as treat]
             [orbit.evaluation :as eval]
             [saphire.complete :as complete]
-            [lazuli.state :as state]
+            [tango.state :as state]
             ["atom" :refer [Range]]))
 
 (defn- treat-result [editor prefix {:keys [text/contents completion/type]}]
