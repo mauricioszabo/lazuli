@@ -30,6 +30,26 @@ with caution).
 
 ![Evaluating code](docs/eval-code.gif)
 
+## For Clojure and ClojureScript
+
+Lazuli connects to a Clojure REPL. Different from other plug-ins, Lazuli tries
+to understand the EDN that's being returned, and then display in a meaningful
+way (collections are rendered like trees, tagged literals can be expanded, big
+strings can be printed as string format like `"some\nthing"` or can be
+"expanded" so that newlines become real newlines and it's possible to see the
+full string, etc).
+
+For ClojureScript, there are some enhancements to the overall experience: Lazuli
+can show compilation errors, and _it will also show_ if the compilation failed:
+
+![ClojureScript compilation errors](docs/cljs-errors.jpg)
+
+Also, for stacktraces, Lazuli will try to use a source map and map your
+stacktraces to CLJS files. This can also be disabled, if you want to check
+exactly what was the Javascript code that the compiler generated
+
+![ClojureScript stack traces](docs/source-map.gif)
+
 ## For Ruby
 
 ### Tracing

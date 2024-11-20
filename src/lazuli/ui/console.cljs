@@ -27,9 +27,9 @@
         p (.. js/atom
               -workspace
               (open "atom://lazuli-terminal" #js {:split split
-                                                     :searchAllPanes true
-                                                     :activatePane false
-                                                     :activateItem false}))]
+                                                  :searchAllPanes true
+                                                  :activatePane false
+                                                  :activateItem false}))]
     (.then p #(.focus active))
     (.then p #(-> div .-childNodes first))))
 

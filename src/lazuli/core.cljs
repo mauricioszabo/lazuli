@@ -34,6 +34,7 @@
              :clear-inline-results #(inline/clear-results! (atom/current-editor))})))
 
 (defn deactivate [disconnect?]
+  #_
   (when disconnect?
     (doseq [[_ state] @conn/connections
             :let [disconnect (-> @state :editor/commands :disconnect :command)]]

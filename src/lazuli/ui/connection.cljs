@@ -1,7 +1,7 @@
 (ns lazuli.ui.connection
   (:require [reagent.core :as r]
             [reagent.dom :as rdom]
-            [lazuli.state :refer [state]]
+            [tango.state :refer [state]]
             [lazuli.ui.atom :as atom]
             [lazuli.utils :as aux]
             [repl-tooling.editor-helpers :as helpers]))
