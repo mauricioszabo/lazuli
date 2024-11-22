@@ -1,5 +1,13 @@
 ## Planned/TODO
 
+# 0.2.2
+- Config files now work with Ruby
+- Fixed cases of block evaluation with Ruby that returned the wrong body to eval
+- Fixed some exception when connecting nREPLs
+- Clojure config is now horored to eval something
+- Fixed autocomplete issue with Clojure
+
+
 # 0.2.1
 - Re-added config for Clojure evaluation
 - Fixed some cases of Ruby's block evaluation
