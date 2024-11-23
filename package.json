@@ -2,7 +2,7 @@
   "name": "lazuli",
   "main": "./lib/main",
   "version": "0.2.2",
-  "description": "Interactive nREPL client for Ruby",
+  "description": "Interactive nREPL client for Clojure, ClojureScript, and Ruby. The evolution of Chlorine.",
   "keywords": [
     "ruby",
     "repl",
