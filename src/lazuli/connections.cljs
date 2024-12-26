@@ -132,7 +132,7 @@
 (defn- observe-editors! [state, ^js editor]
   (swap! commands conj (.onDidStopChanging editor #(stop-changing! state editor %))))
 
-(defn- register-commands! [console cmds state]
+(defn- register-commands! [cmds state]
   (remove-all-commands!)
   (when-not ((-> @state :editor/features :is-config?))
     (swap! commands conj (.. js/atom -workspace (observeActiveTextEditor #(observe-editor! state %))))
@@ -217,9 +217,9 @@
                       :get-config #(get-config)
                       :editor-data #(get-editor-data)
                       :config-directory (path/join (. js/atom getConfigDirPath) "lazuli")}
-           repl-state (s-connections/connect-nrepl! host port callbacks
-                                                    {:open-console open-console!
-                                                     :set-console? true})]
+           repl-state (conn/connect! host port callbacks
+                                     {:open-console open-console!
+                                      :set-console? true})]
      (when repl-state
        (reset! console ((-> @repl-state :editor/callbacks :get-console)))
        (reset! symbols/find-symbol (-> @repl-state :editor/features :find-definition))))))
