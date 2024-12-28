@@ -7,7 +7,9 @@
             [clojure.string :as str]
             [promesa.core :as p]))
 
-(def fixture-path (path/join js/__dirname ".." "test" "ruby_example"))
+(def fixture-paths
+  {:ruby (path/join js/__dirname ".." "test" "ruby_example")
+   :clj (path/join "tmp" "clj_fixture")})
 (def electron (.-_electron play))
 
 (defn run-command! [{:keys [^js page]} command]
@@ -27,8 +29,9 @@
 (defn expect! [playwright selector]
   (expect (locate! playwright selector)))
 
-(defn run-pulsar! []
+(defn run-pulsar! [fixture-kind]
   (let [env (.-env js/process)
+        fixture-path (fixture-paths fixture-kind)
         _ (println "Running on path" fixture-path)
         config (clj->js {:args ["--clear-window-state" "--no-sandbox" fixture-path]
                          :cwd fixture-path
