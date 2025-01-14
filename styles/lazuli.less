@@ -2,6 +2,19 @@
 @import "ui-variables";
 
 .lazuli.result, .lazuli.console {
+  .icon {
+    font-family: 'Octicons Regular';
+  }
+  .icon.clipboard:before {
+    content: "\f035";
+    line-height: 1;
+  }
+  .icon.clipboard.copy {
+    opacity: 0.2;
+    transition: 0.5s;
+    &:hover { opacity: 1; }
+  }
+
   hr {
     margin: 1px;
     border: 0;
@@ -189,12 +202,6 @@
     display: inline-block;
     margin: 0;
     padding: 0;
-    // width: 2em;
-    // height: 2em;
-    // position: relative;
-    // top: 50%;
-    // vertical-align: middle;
-    // ali
   }
 
   .icon:before {
@@ -210,11 +217,7 @@
 
   .icon.loading:before {
     content: "\f02f";
-    // width: 1.2em;
-    // height: 1.2em;
-    // vertical-align: middle;
     line-height: 1;
-    // text-align: center;
   }
 
   .icon.check:before {
