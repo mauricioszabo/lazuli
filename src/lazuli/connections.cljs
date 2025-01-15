@@ -14,11 +14,7 @@
             [promesa.core :as p]
             [tango.commands-to-repl.pathom :as pathom]
             [lazuli.providers-consumers.symbols :as symbols]
-            [saphire.code-treatment :as treat]
-            [lazuli.ruby-parsing :as rp]
-            [com.wsscode.pathom3.connect.operation :as connect]
             [tango.ui.elements :as ui]
-            [saphire.connections :as s-connections]
             [tango.state :as state]
             ["path" :as path]
             ["fs" :as fs]))
@@ -217,6 +213,7 @@
                       :notify notify!
                       :open-editor open-editor
                       :prompt (partial prn :PROMPT)
+                      :on-copy #(.. js/atom -clipboard (write %))
                       :get-config #(get-config)
                       :editor-data #(get-editor-data)
                       :config-directory (path/join (. js/atom getConfigDirPath) "lazuli")}
