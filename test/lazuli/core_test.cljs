@@ -1,6 +1,6 @@
 (ns lazuli.core-test
-  (:require [lazuli.evaluation-test]
-            [lazuli.block-test]
+  (:require [lazuli.ruby.evaluation-test]
+            [lazuli.clojure.evaluation-test]
             [clojure.test :as test]
             [saphire.code-treatment :as treat]))
 

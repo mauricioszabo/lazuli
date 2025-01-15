@@ -13,13 +13,8 @@
             [lazuli.providers-consumers.lsp :as lsp]
             [promesa.core :as p]
             [tango.commands-to-repl.pathom :as pathom]
-            [lazuli.providers-consumers.autocomplete :as lazuli-complete]
             [lazuli.providers-consumers.symbols :as symbols]
-            [saphire.code-treatment :as treat]
-            [lazuli.ruby-parsing :as rp]
-            [com.wsscode.pathom3.connect.operation :as connect]
             [tango.ui.elements :as ui]
-            [saphire.connections :as s-connections]
             [tango.state :as state]
             ["path" :as path]
             ["fs" :as fs]))
@@ -75,18 +70,22 @@
     (doseq [elem (-> div (.querySelectorAll "input") as-clj)]
       (aset elem "onkeydown" (partial treat-key cmd panel)))))
 
-(defn- get-editor-data []
-  (when-let [^js editor (atom/current-editor)]
-    (let [range (.getSelectedBufferRange editor)
-          start (.-start range)
-          end (.-end range)]
-      {:editor editor
-       :language (-> editor .getGrammar .-name str/lower-case keyword)
-       :contents (.getText editor)
-       :filename (.getPath editor)
-       :range [[(.-row start) (.-column start)]
-               [(.-row end) (cond-> (.-column end)
-                              (not= (.-column start) (.-column end)) dec)]]})))
+(defn get-editor-data
+  ([]
+   (when-let [editor (atom/current-editor)] (get-editor-data editor)))
+  ([^js editor]
+   (let [range (.getSelectedBufferRange editor)
+         start (.-start range)
+         end (.-end range)
+         lang (-> editor .getGrammar .-name str/lower-case keyword)
+         lang (if (= :erb lang) :ruby lang)]
+     {:editor editor
+      :language lang
+      :contents (.getText editor)
+      :filename (.getPath editor)
+      :range [[(.-row start) (.-column start)]
+              [(.-row end) (cond-> (.-column end)
+                             (not= (.-column start) (.-column end)) dec)]]})))
 
 (defn- notify! [{:keys [type title message]}]
   (case type
@@ -132,7 +131,7 @@
 (defn- observe-editors! [state, ^js editor]
   (swap! commands conj (.onDidStopChanging editor #(stop-changing! state editor %))))
 
-(defn- register-commands! [console cmds state]
+(defn- register-commands! [cmds state]
   (remove-all-commands!)
   (when-not ((-> @state :editor/features :is-config?))
     (swap! commands conj (.. js/atom -workspace (observeActiveTextEditor #(observe-editor! state %))))
@@ -214,12 +213,13 @@
                       :notify notify!
                       :open-editor open-editor
                       :prompt (partial prn :PROMPT)
+                      :on-copy #(.. js/atom -clipboard (write %))
                       :get-config #(get-config)
                       :editor-data #(get-editor-data)
                       :config-directory (path/join (. js/atom getConfigDirPath) "lazuli")}
-           repl-state (s-connections/connect-nrepl! host port callbacks
-                                                    {:open-console open-console!
-                                                     :set-console? true})]
+           repl-state (conn/connect! host port callbacks
+                                     {:open-console open-console!
+                                      :set-console? true})]
      (when repl-state
        (reset! console ((-> @repl-state :editor/callbacks :get-console)))
        (reset! symbols/find-symbol (-> @repl-state :editor/features :find-definition))))))

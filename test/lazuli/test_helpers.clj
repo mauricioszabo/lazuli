@@ -1,9 +1,9 @@
 (ns lazuli.test-helpers
   (:require [promesa.core :as p]))
 
-(defmacro with-pulsar [[binding & {:as config}] & body]
+(defmacro with-pulsar [fixture-kind [binding & {:as config}] & body]
   (let [debug (:debug config)]
-    `(p/let [~binding (run-pulsar!)]
+    `(p/let [~binding (run-pulsar! ~fixture-kind)]
        (when ~debug (def ~binding ~binding))
        (p/finally (p/do! ~@body)
                   #(when-not ~debug (.close (:app ~binding)))))))

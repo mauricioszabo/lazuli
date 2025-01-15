@@ -6,6 +6,7 @@
             [orbit.evaluation :as eval]
             [saphire.complete :as complete]
             [tango.state :as state]
+            [lazuli.connections :as conn]
             ["atom" :refer [Range]]))
 
 (defn- treat-result [editor prefix {:keys [text/contents completion/type]}]
@@ -38,7 +39,7 @@
            :replacementPrefix prefix})))
 
 (defn suggestions [{:keys [^js editor activatedManually]}]
-  (p/let [state (-> editor .getGrammar .-name str/lower-case keyword state/get-state)
+  (p/let [state (-> editor conn/get-editor-data :language state/get-state)
           eql (-> @state :editor/features :eql)
           completions (eql [{:editor/contents [:completions/all :completions/prefix]}])
           completions (:editor/contents completions)]
