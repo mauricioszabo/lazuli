@@ -91,7 +91,7 @@
     (. (expect (.locator page ".modal:visible")) toBeHidden)
     (. (expect (.locator page "a.current-path")) toContainText file)))
 
-(defn goto-line! [{:keys [^js page] :as play} rowcol]
+(defn goto-line! [play rowcol]
   (p/let [_ (run-command! play "Go To Line: Toggle")]
     (type! play ".from-top .go-to-line atom-text-editor.is-focused" (str rowcol "\n"))))
 

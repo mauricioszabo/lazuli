@@ -2,14 +2,10 @@
   (:require [clojure.walk :as walk]
             [clojure.string :as str]
             [promesa.core :as p]
-            [saphire.code-treatment :as treat]
-            [orbit.evaluation :as eval]
-            [saphire.complete :as complete]
             [tango.state :as state]
-            [lazuli.connections :as conn]
-            ["atom" :refer [Range]]))
+            [lazuli.connections :as conn]))
 
-(defn- treat-result [editor prefix {:keys [text/contents completion/type]}]
+(defn- treat-result [_editor prefix {:keys [text/contents completion/type]}]
   (let [[icon-name multiplier] (case type
                                  :enum ["book status-modified" 1]
                                  :function ["package status-renamed" 1]
@@ -38,7 +34,7 @@
            :iconHTML (str "<i class='icon-" icon-name "'></i>")
            :replacementPrefix prefix})))
 
-(defn suggestions [{:keys [^js editor activatedManually]}]
+(defn suggestions [{:keys [^js editor _activatedManually]}]
   (p/let [state (-> editor conn/get-editor-data :language state/get-state)
           eql (-> @state :editor/features :eql)
           completions (eql [{:editor/contents [:completions/all :completions/prefix]}])

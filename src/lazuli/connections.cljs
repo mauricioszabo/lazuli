@@ -2,22 +2,17 @@
   (:require [reagent.dom :as rdom]
             [clojure.string :as str]
             [tango.editor-helpers :as helpers]
-            [orbit.evaluation :as eval]
             [tango.integration.connection :as conn]
             [reagent.core :as r]
-            [tango.ui.edn :as edn]
             [lazuli.ui.atom :as atom]
             [lazuli.ui.inline-results :as inline]
             [lazuli.ui.console :as lazuli-console]
             [tango.ui.console :as tango-console]
-            [lazuli.providers-consumers.lsp :as lsp]
             [promesa.core :as p]
-            [tango.commands-to-repl.pathom :as pathom]
             [lazuli.providers-consumers.symbols :as symbols]
             [tango.ui.elements :as ui]
             [tango.state :as state]
-            ["path" :as path]
-            ["fs" :as fs]))
+            ["path" :as path]))
 
 (defn destroy! [^js panel]
   (.destroy panel)
@@ -120,8 +115,7 @@
 (defn- stop-changing! [state ^js editor ^js changes]
   ; (js/console.log "CHANGES", changes)
   (when-let [path (.getPath editor)]
-    (let [update! (-> @state :editor/features :update-watches)
-          render-watches! (-> @state :editor/features :render-watches)]
+    (let [update! (-> @state :editor/features :update-watches)]
       (doseq [^js change (.-changes changes)
               :let [delta (- (.. change -newExtent -row) (.. change -oldExtent -row))]
               :when (not= 0 delta)]
@@ -203,7 +197,6 @@
                 (destroy! panel))))
   ([host port]
    (p/let [console (atom nil)
-           lang (:language (get-editor-data))
            callbacks {:on-disconnect #(disconnect! %)
                       :on-start-eval #(start-eval! %1 %2)
                       :on-eval #(did-eval! %1 %2)

@@ -35,9 +35,6 @@
                   :aux lazuli.ui.atom/aux
                   ; :repl lazuli.repl/exports
 
-                  :everything-provider
-                  lazuli.providers-consumers.everything/activate
-
                   :autocomplete-provider
                   lazuli.providers-consumers.autocomplete/provider
 
@@ -45,10 +42,7 @@
                   lazuli.providers-consumers.status-bar/activate
 
                   :symbol-provider
-                  lazuli.providers-consumers.symbols/provider
-
-                  :lsp-consumer
-                  lazuli.providers-consumers.lsp/activate}
+                  lazuli.providers-consumers.symbols/provider}
 
         :output-dir "lib/js"
         :output-to "lib/cmds.js"
