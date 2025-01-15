@@ -4,7 +4,8 @@
             [lazuli.ui.inline-results :as inline]
             [tango.integration.interpreter :as int]
             ["fs" :as fs]
-            ["path" :as path]))
+            ["path" :as path]
+            [tango.state :as state]))
 
 (def config
   (clj->js
@@ -39,7 +40,8 @@
     (doseq [[_ state] @conn/connections
             :let [disconnect (-> @state :editor/commands :disconnect :command)]]
       (disconnect)))
-  (.dispose ^js @atom/subscriptions))
+  (.dispose ^js @atom/subscriptions)
+  (state/disconnect! :Config))
 
 (defonce ^:private old-connection (atom nil))
 
