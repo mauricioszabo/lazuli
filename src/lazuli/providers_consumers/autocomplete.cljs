@@ -35,16 +35,16 @@
            :replacementPrefix prefix})))
 
 (defn suggestions [{:keys [^js editor _activatedManually]}]
-  (p/let [state (-> editor conn/get-editor-data :language state/get-state)
-          eql (-> @state :editor/features :eql)
-          completions (eql [{:editor/contents [:completions/all :completions/prefix]}])
-          completions (:editor/contents completions)]
-    (->> completions
-         :completions/all
-         (map #(treat-result editor (:completions/prefix completions) %))
-         (filter identity)
-         (sort-by #(- (.-score ^js %)))
-         into-array)))
+  (when-let [state (-> editor conn/get-editor-data :language state/get-state)]
+    (p/let [eql (-> @state :editor/features :eql)
+            completions (eql [{:editor/contents [:completions/all :completions/prefix]}])
+            completions (:editor/contents completions)]
+      (->> completions
+           :completions/all
+           (map #(treat-result editor (:completions/prefix completions) %))
+           (filter identity)
+           (sort-by #(- (.-score ^js %)))
+           into-array))))
 
 (defn- detailed-suggestion [suggestion])
 
