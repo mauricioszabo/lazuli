@@ -2,9 +2,11 @@
   (:require [lazuli.ruby.evaluation-test]
             [lazuli.clojure.evaluation-test]
             [clojure.test :as test]
+            #_
             [saphire.code-treatment :as treat]))
 
 
+#_
 (defmethod test/report [::test/default :begin-test-var] [m]
   (println "Testing:" (test/testing-vars-str m)))
 
@@ -17,6 +19,7 @@
         (js/process.exit 0)
         (js/process.exit 1)))
     ; (js/setTimeout)
+    #_
     (.then treat/done
          #(test/run-all-tests #"lazuli.*\-test"))))
      ; 200)))
