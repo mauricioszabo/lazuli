@@ -1,6 +1,5 @@
 (ns lazuli.ui.console
-  (:require [reagent.dom :as rdom]
-            [lazuli.ui.atom :as atom]
+  (:require [lazuli.ui.atom :as atom]
             [tango.ui.console :as console]))
 
 (defonce ^:private console-pair

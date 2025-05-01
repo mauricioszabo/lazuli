@@ -34,7 +34,7 @@
              :open-config open-config!
              :clear-inline-results #(inline/clear-results! (atom/current-editor))})))
 
-(defn deactivate [disconnect?]
+(defn deactivate []
   #_
   (when disconnect?
     (doseq [[_ state] @conn/connections

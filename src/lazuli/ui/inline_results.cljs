@@ -15,7 +15,9 @@
     (.destroy marker)))
 
 (defn- create-result [id editor range]
-  (let [marker ^js (. editor markBufferRange
+  (let [end-col (get-in range [1 1])
+        range (cond-> range (zero? end-col) (update-in [1 0] dec))
+        marker ^js (. editor markBufferRange
                      (clj->js range)
                      #js {:invalidate "inside"})
         div (. js/document createElement "div")
@@ -27,16 +29,18 @@
     div))
 
 (defn- find-result [^js editor range]
-  (some-> editor
-          (.findMarkers #js {:endBufferRow (-> range last first)})
-          (->> (filter #(.-__divElement ^js %))
-               first)))
+  (let [end-col (get-in range [1 1])
+        range (cond-> range (zero? end-col) (update-in [1 0] dec))]
+    (some-> editor
+            (.findMarkers #js {:endBufferRow (-> range last first)})
+            (->> (filter #(.-__divElement ^js %))
+                 first))))
 
 (defn create! [data]
   (when-let [editor (-> data :editor/data :editor)]
     (let [id (:id data)
           range (:text/range data)
-          _ (when-let [old-marker (find-result editor range)]
+          _ (when-let [^js old-marker (find-result editor range)]
               (.destroy old-marker))
           div (create-result id editor range)]
       (doto div

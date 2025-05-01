@@ -2,22 +2,17 @@
   (:require [reagent.dom :as rdom]
             [clojure.string :as str]
             [tango.editor-helpers :as helpers]
-            [orbit.evaluation :as eval]
             [tango.integration.connection :as conn]
             [reagent.core :as r]
-            [tango.ui.edn :as edn]
             [lazuli.ui.atom :as atom]
             [lazuli.ui.inline-results :as inline]
             [lazuli.ui.console :as lazuli-console]
             [tango.ui.console :as tango-console]
-            [lazuli.providers-consumers.lsp :as lsp]
             [promesa.core :as p]
-            [tango.commands-to-repl.pathom :as pathom]
             [lazuli.providers-consumers.symbols :as symbols]
             [tango.ui.elements :as ui]
             [tango.state :as state]
-            ["path" :as path]
-            ["fs" :as fs]))
+            ["path" :as path]))
 
 (defn destroy! [^js panel]
   (.destroy panel)
@@ -70,17 +65,19 @@
     (doseq [elem (-> div (.querySelectorAll "input") as-clj)]
       (aset elem "onkeydown" (partial treat-key cmd panel)))))
 
+(defn- get-lang [^js editor]
+  (let [lang (-> editor .getGrammar .-name str/lower-case keyword)]
+    (if (= :erb lang) :ruby lang)))
+
 (defn get-editor-data
   ([]
    (when-let [editor (atom/current-editor)] (get-editor-data editor)))
   ([^js editor]
    (let [range (.getSelectedBufferRange editor)
          start (.-start range)
-         end (.-end range)
-         lang (-> editor .getGrammar .-name str/lower-case keyword)
-         lang (if (= :erb lang) :ruby lang)]
+         end (.-end range)]
      {:editor editor
-      :language lang
+      :language (get-lang editor)
       :contents (.getText editor)
       :filename (.getPath editor)
       :range [[(.-row start) (.-column start)]
@@ -111,31 +108,33 @@
                                               (fn [] (command-function))))]
     (swap! commands conj disposable)))
 
-(defn- observe-editor! [state ^js editor]
+(defn- observe-editor! [^js editor]
+  (def editor editor)
   (when editor
-    (when-let [display! (-> @state :editor/features :display-watches)]
-      (when-let [path (not-empty (.getPath editor))]
-        (display! path)))))
+    (when-let [state (state/get-state (get-lang editor))]
+      (when-let [display! (-> @state :editor/features :display-watches)]
+        (when-let [path (not-empty (.getPath editor))]
+          (display! path))))))
 
 (defn- stop-changing! [state ^js editor ^js changes]
   ; (js/console.log "CHANGES", changes)
   (when-let [path (.getPath editor)]
-    (let [update! (-> @state :editor/features :update-watches)
-          render-watches! (-> @state :editor/features :render-watches)]
+    (let [update! (-> @state :editor/features :update-watches)]
       (doseq [^js change (.-changes changes)
               :let [delta (- (.. change -newExtent -row) (.. change -oldExtent -row))]
               :when (not= 0 delta)]
         ; (prn :DELTA delta :ROW (.. change -oldStart -row))
         (update! path (.. change -oldStart -row) delta)))))
 
-(defn- observe-editors! [state, ^js editor]
-  (swap! commands conj (.onDidStopChanging editor #(stop-changing! state editor %))))
+(defn- observe-editors! [^js editor]
+  (when-let [state (state/get-state (get-lang editor))]
+    (swap! commands conj (.onDidStopChanging editor #(stop-changing! state editor %)))))
 
 (defn- register-commands! [cmds state]
   (remove-all-commands!)
   (when-not ((-> @state :editor/features :is-config?))
-    (swap! commands conj (.. js/atom -workspace (observeActiveTextEditor #(observe-editor! state %))))
-    (swap! commands conj (.. js/atom -workspace (observeTextEditors #(observe-editors! state %)))))
+    (swap! commands conj (.. js/atom -workspace (observeActiveTextEditor #(observe-editor! %))))
+    (swap! commands conj (.. js/atom -workspace (observeTextEditors #(observe-editors! %)))))
   (doseq [[key {:keys [command]}] cmds]
     (add-command! (name key) command)))
 
@@ -143,10 +142,9 @@
   (inline/create! result)
 
   (let [con ((:get-console (:editor/callbacks @state)))
-        div (js/document.createElement "div")]
-    (set! (.-id div) (:id result))
-    (.. div -classList (add "content" "pending"))
-    (set! (.-innerHTML div) "<div class='tango icon-container'><span class='icon loading'></span></div>")
+        div (ui/dom [:div {:id (:id result) :class ["content" "pending"]}
+                     [:div {:class ["tango" "icon-container"]}
+                      [:span {:class ["icon" "loading"]}]]])]
     (tango-console/append con div ["icon-code"])
     (js/setTimeout (fn []
                      (when (.. div -classList (contains "pending"))
@@ -203,7 +201,6 @@
                 (destroy! panel))))
   ([host port]
    (p/let [console (atom nil)
-           lang (:language (get-editor-data))
            callbacks {:on-disconnect #(disconnect! %)
                       :on-start-eval #(start-eval! %1 %2)
                       :on-eval #(did-eval! %1 %2)
