@@ -14,7 +14,7 @@
     "babashka",
     "interactive"
   ],
-  "repository": "https://gitlab.com/clj-editors/lazuli",
+  "repository": "https://github.com/mauricioszabo/lazuli",
   "license": "MIT",
   "engines": {
     "atom": ">=1.115.2024041019 <2.0.0"
