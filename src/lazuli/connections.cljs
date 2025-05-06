@@ -195,10 +195,15 @@
 
 (defn connect-nrepl!
   ([]
-   (conn-view (fn [panel]
-                (connect-nrepl! (:hostname @local-state)
-                                (:port @local-state))
-                (destroy! panel))))
+   (let [lang (:language (get-editor-data))]
+     (if (state/get-state lang)
+       (notify! {:type :warn
+                 :title "Already connected"
+                 :message (str "REPL already connected for " (name lang))})
+       (conn-view (fn [panel]
+                    (connect-nrepl! (:hostname @local-state)
+                                    (:port @local-state))
+                    (destroy! panel))))))
   ([host port]
    (p/let [console (atom nil)
            callbacks {:on-disconnect #(disconnect! %)
