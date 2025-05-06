@@ -1,5 +1,12 @@
 ## Planned/TODO
 
+# 0.3.0
+- Fixed some bugs related to Ruby parsing results
+- Added a very early support for Python
+- Fixed config files autocompletion, doc, and definition for Ruby
+- Fixed "double-connection" bug - Lazuli now detects you're already connected
+for the language and forbids to connect again
+
 # 0.2.2
 - Config files now work with Ruby
 - Fixed cases of block evaluation with Ruby that returned the wrong body to eval

@@ -1,10 +1,11 @@
 {
   "name": "lazuli",
   "main": "./lib/main",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Interactive nREPL client for Ruby",
   "keywords": [
     "ruby",
+    "python",
     "repl",
     "interactive",
     "nrepl",
