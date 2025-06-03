@@ -28,17 +28,24 @@
       (fs/writeFileSync config (int/default-code 'lazuli.config)))
     (.. js/atom -workspace (open config))))
 
+(defn- add-bind-command! []
+  (let [editor (.. js/atom -workspace getActiveTextEditor)]
+    (case (.. editor getGrammar -name)
+      "Ruby" (.insertText editor "NREPL::Server.bind!(binding, port: 9199")
+      "Python" (.insertText editor "NREPL.bind(__import__('inspect').currentframe(), port=9199)"))))
+
 (def commands
   (fn []
    (clj->js {:connect conn/connect-nrepl!
              :open-config open-config!
+             :add-bind-command add-bind-command!
              :clear-inline-results #(inline/clear-results! (atom/current-editor))})))
 
 (defn deactivate []
   #_
   (when disconnect?
-    (doseq [[_ state] @conn/connections
-            :let [disconnect (-> @state :editor/commands :disconnect :command)]]
+    (doseq [[_ state] @conn/connections]
+          :let [disconnect (-> @state :editor/commands :disconnect :command)]
       (disconnect)))
   (.dispose ^js @atom/subscriptions)
   (state/disconnect! :Config))
