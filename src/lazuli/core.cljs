@@ -31,7 +31,7 @@
 (defn- add-bind-command! []
   (let [editor (.. js/atom -workspace getActiveTextEditor)]
     (case (.. editor getGrammar -name)
-      "Ruby" (.insertText editor "NREPL::Server.bind!(binding, port: 9199")
+      "Ruby" (.insertText editor "NREPL::Server.bind!(binding, port: 9199)")
       "Python" (.insertText editor "NREPL.bind(__import__('inspect').currentframe(), port=9199)"))))
 
 (def commands
