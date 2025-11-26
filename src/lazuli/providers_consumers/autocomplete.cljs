@@ -37,10 +37,11 @@
 (defn suggestions [{:keys [^js editor _activatedManually]}]
   (when-let [state (-> editor conn/get-editor-data :language state/get-state)]
     (p/let [eql (-> @state :editor/features :eql)
-            completions (eql [{:editor/contents [:completions/all :completions/prefix]}])
-            completions (:editor/contents completions)]
-      (->> completions
-           :completions/all
+            ;; FIXME - nrepl and all should be the same.
+            completions (eql [{:editor/contents [:completions/all :completions/nrepl :completions/prefix]}])
+            completions (:editor/contents completions)
+            suggestions (:completions/all completions (:completions/nrepl completions))]
+      (->> suggestions
            (map #(treat-result editor (:completions/prefix completions) %))
            (filter identity)
            (sort-by #(- (.-score ^js %)))
@@ -50,8 +51,8 @@
 
 (def provider
   (fn []
-    #js {:selector ".source.ruby,.source.clojure"
-         :disableForSelector ".source.ruby .comment"
+    #js {:selector ".source.ruby,.source.clojure,.source.python"
+         :disableForSelector ".source.ruby .comment,.source.python .comment"
 
          :inclusionPriority 100
          :excludeLowerPriority false
